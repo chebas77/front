@@ -3,17 +3,16 @@ import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { Calculator, FileText, FolderOpen, Settings, Home, ChevronLeft, ChevronRight, Cog, LogOut } from "lucide-react";
+import { Calculator, FileText, FolderOpen, Settings, Home, ChevronLeft, ChevronRight, Cog, LogOut, Sparkles } from "lucide-react";
+
 import { useAuth } from "./auth-provider";
 
 const RAW_ITEMS = [
-  { icon: Home, label: "Dashboard", href: "/app" },
-  { icon: Calculator, label: "Cálculos", href: "/app/calculations" },
-  { icon: FileText, label: "Reportes", href: "/app/reports" },
-  { icon: FolderOpen, label: "Proyectos", href: "/app/projects" },
-  { icon: Settings, label: "Configuración", href: "/app/settings" },
+  { icon: Home,        label: "Dashboard",      href: "/app" },
+  { icon: Calculator,  label: "Cálculos",       href: "/app/calculations" },
+  { icon: FileText,    label: "Reportes",       href: "/app/reports" },
+  { icon: Sparkles,    label: "Características", href: "/app/caracteristicas" }, // <-- NUEVO
 ];
-
 const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 export function Sidebar() {

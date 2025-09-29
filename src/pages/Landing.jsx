@@ -2,6 +2,7 @@ import { Link } from "react-router-dom"
 import { Button } from "../components/ui/button"
 import { ThemeToggle } from "../components/theme-toggle"
 import { ArrowRight, ShieldCheck, Gauge, Wrench } from "lucide-react"
+import { SiteFooter } from "../components/site-footer";
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:4000"
 
@@ -16,9 +17,10 @@ export default function Landing() {
             <span className="font-bold">Industrial Alignment Pro</span>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/app">
-              <Button variant="ghost">Entrar al demo</Button>
-            </Link>
+            <Link to="/demo/calculations">
+  <Button variant="ghost">Entrar al demo</Button>
+</Link>
+
             <ThemeToggle />
           </div>
         </div>
@@ -51,11 +53,12 @@ export default function Landing() {
                 </Button>
               </a>
 
-              <a href="#caracteristicas">
+              {/* Ir a la página pública /caracteristicas */}
+              <Link to="/caracteristicas" className="inline-block">
                 <Button variant="outline" className="h-11 px-5">
                   Ver características <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
-              </a>
+              </Link>
             </div>
 
             <p className="mt-3 text-xs text-muted-foreground">
@@ -105,16 +108,7 @@ export default function Landing() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between text-sm text-muted-foreground">
-          <span>© {new Date().getFullYear()} Industrial Alignment Pro</span>
-          <div className="flex gap-4">
-            <a href="#" className="hover:underline">Privacidad</a>
-            <a href="#" className="hover:underline">Términos</a>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

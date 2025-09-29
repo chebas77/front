@@ -8,6 +8,9 @@ import Calculations from "./pages/Calculations";
 import AlignmentWizard from "./pages/AlignmentWizard";
 import RimFaceWizard from "./pages/RimFaceWizard";
 import Reports from "./pages/Reports";
+import Caracteristicas from "./pages/Caracteristicas"; // <-- NUEVO
+import CaracteristicasPublic from "./pages/CaracteristicasPublic"; // <-- nuevo
+import CalculationsDemo from "./pages/CalculationsDemo";
 
 function AppShell() {
   return (
@@ -19,19 +22,19 @@ function AppShell() {
           <Routes>
             {/* Dashboard principal de la app */}
             <Route index element={<Dashboard />} />
-
-            {/* Página de cálculos – técnica de relojes */}
+            {/* Cálculos – técnica de relojes */}
             <Route path="calculations" element={<Calculations />} />
+            <Route path="caracteristicas" element={<Caracteristicas />} />
 
-            {/* Rutas de ejemplo para las demás secciones */}
-            import AlignmentWizard from "./pages/AlignmentWizard";
-// ...
-<Route path="alignment/new" element={<AlignmentWizard />} />
- <Route path="reports" element={<Reports />} />
-<Route path="alignment/rim-face/new" element={<RimFaceWizard />} />
-            <Route path="reports" element={<div>Reportes</div>} />
-            <Route path="projects" element={<div>Proyectos</div>} />
-            <Route path="settings" element={<div>Configuración</div>} />
+            {/* NUEVO: Características */}
+            <Route path="caracteristicas" element={<Caracteristicas />} />
+
+            {/* Asistentes / wizards */}
+            <Route path="alignment/new" element={<AlignmentWizard />} />
+            <Route path="alignment/rim-face/new" element={<RimFaceWizard />} />
+
+            {/* Otras secciones */}
+            <Route path="reports" element={<Reports />} />
 
             {/* Cualquier ruta desconocida dentro de /app redirige al dashboard */}
             <Route path="*" element={<Navigate to="." replace />} />
@@ -45,23 +48,25 @@ function AppShell() {
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Landing pública */}
-        <Route path="/" element={<Landing />} />
+  <Routes>
+    <Route path="/" element={<Landing />} />
 
-        {/* Área protegida de la aplicación */}
-        <Route
-          path="/app/*"
-          element={
-            <ProtectedRoute>
-              <AppShell />
-            </ProtectedRoute>
-          }
-        />
+            {/* Calculadora pública en modo demo */}
+           <Route path="/demo/calculations" element={<CalculationsDemo />} />
+    {/* Página pública de características */}
+    <Route path="/caracteristicas" element={<CaracteristicasPublic />} />  {/* <-- nuevo */}
 
-        {/* Rutas no reconocidas fuera de /app redirigen a landing */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <Route
+      path="/app/*"
+      element={
+        <ProtectedRoute>
+          <AppShell />
+        </ProtectedRoute>
+      }
+    />
+    <Route path="*" element={<Navigate to="/" replace />} />
+  </Routes>
+</BrowserRouter>
+
   );
 }

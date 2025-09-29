@@ -1,11 +1,15 @@
 // src/pages/Calculations.jsx
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
+// arriba del componente
+const LOGIN_URL = `${API}/auth/google?redirect=/app/calculations`; // <-- NUEVO
 
-export default function Calculations() {
+export default function Calculations({ demo = false }) {
+  const isDemo = useMemo(() => !!demo, [demo]);
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -133,6 +137,12 @@ export default function Calculations() {
   }
 
   async function handleCreateReport(meta) {
+    // Bloquear guardado/export en DEMO
+    if (isDemo) {
+      setError("Modo demo: crear reporte y exportar a PDF están deshabilitados.");
+      return;
+    }
+
     try {
       setCreating(true);
       setError("");
@@ -200,6 +210,19 @@ export default function Calculations() {
 
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      {/* Aviso DEMO */}
+      {isDemo && (
+  <div className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 p-3 text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <p>
+      <strong>Modo demo:</strong> puedes realizar el cálculo completo, pero
+      <strong> no se guardarán</strong> datos ni podrás <strong>exportar a PDF</strong>.
+    </p>
+    <a href={LOGIN_URL} className="shrink-0">
+      <Button size="sm">Iniciar sesión y continuar</Button>
+    </a>
+  </div>
+)}
+
       {/* Step 1 of 3: Physical Data Input */}
       {step === 1 && (
         <Card className="bg-card">
@@ -400,19 +423,32 @@ export default function Calculations() {
             )}
 
             {/* Crear Reporte (PDF + BD) */}
-            {res && (
+            {res && !isDemo && (
               <>
                 <ReportMeta onCreate={handleCreateReport} creating={creating} />
                 {pdfUrl && (
                   <div className="text-sm mt-2">
                     Reporte listo:&nbsp;
-                    <a className="text-primary underline" href={pdfUrl} target="_blank">
+                    <a className="text-primary underline" href={pdfUrl} target="_blank" rel="noreferrer">
                       Descargar PDF
                     </a>
                   </div>
                 )}
               </>
             )}
+
+            {/* Aviso en DEMO en lugar del formulario de reporte */}
+            {res && isDemo && (
+  <div className="rounded-md border border-yellow-400/30 bg-yellow-500/10 p-3 text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <span>
+      Para guardar o exportar a PDF, inicia sesión y usa la versión completa en{" "}
+      <span className="font-medium">/app/calculations</span>.
+    </span>
+    <a href={LOGIN_URL} className="shrink-0">
+      <Button size="sm" variant="default">Iniciar sesión y continuar</Button>
+    </a>
+  </div>
+)}
 
             <div className="flex justify-between">
               <Button variant="outline" onClick={() => setStep(2)}>
