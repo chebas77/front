@@ -80,7 +80,8 @@ export function Dashboard() {
       if (hrs < 24) return `${hrs} h`;
       const days = Math.round(hrs / 24);
       return `${days} d`;
-    } catch (e) {
+    } catch (error) {
+      console.error("No se pudo formatear la fecha", error);
       return "-";
     }
   }

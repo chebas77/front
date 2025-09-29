@@ -1,29 +1,35 @@
-import { createContext, useContext, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AuthContext } from "../contexts/auth-context";
 
-const AuthCtx = createContext({ user: null, loading: true, refresh: () => {} })
-const API = import.meta.env.VITE_API_URL || "http://localhost:4000"
+const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  async function fetchMe() {
+  const fetchMe = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/me`, { credentials: "include" })
-      if (!res.ok) { setUser(null); setLoading(false); return }
-      const data = await res.json()
-      setUser(data.user || null)
-    } catch {
-      setUser(null)
+      const res = await fetch(`${API}/api/me`, { credentials: "include" });
+      if (!res.ok) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      const data = await res.json();
+      setUser(data.user || null);
+    } catch (error) {
+      console.error("Error al cargar el usuario", error);
+      setUser(null);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  }, []);
 
-  useEffect(() => { fetchMe() }, [])
+  useEffect(() => {
+    fetchMe();
+  }, [fetchMe]);
 
-  const value = { user, loading, refresh: fetchMe }
-  return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>
+  const value = useMemo(() => ({ user, loading, refresh: fetchMe }), [user, loading, fetchMe]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
-export function useAuth() { return useContext(AuthCtx) }
