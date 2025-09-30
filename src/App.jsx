@@ -1,16 +1,21 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+
+// Páginas
 import Landing from "./pages/Landing";
+import Calculations from "./pages/Calculations";
+import CalculationsDemo from "./pages/CalculationsDemo";
+import Caracteristicas from "./pages/Caracteristicas";
+import CaracteristicasPublic from "./pages/CaracteristicasPublic";
+import AlignmentWizard from "./pages/AlignmentWizard";
+import RimFaceWizard from "./pages/RimFaceWizard";
+import Reports from "./pages/Reports";
+import ReportPrint from "./pages/ReportPrint.jsx";
+
+// Componentes de layout
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
 import { Dashboard } from "./components/Dashboard";
 import ProtectedRoute from "./components/protected-route";
-import Calculations from "./pages/Calculations";
-import AlignmentWizard from "./pages/AlignmentWizard";
-import RimFaceWizard from "./pages/RimFaceWizard";
-import Reports from "./pages/Reports";
-import Caracteristicas from "./pages/Caracteristicas";
-import CaracteristicasPublic from "./pages/CaracteristicasPublic";
-import CalculationsDemo from "./pages/CalculationsDemo";
 
 function AppShell() {
   return (
@@ -20,18 +25,24 @@ function AppShell() {
         <Header />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background">
           <Routes>
-            {/* Dashboard principal de la app */}
+            {/* Dashboard principal */}
             <Route index element={<Dashboard />} />
-            {/* Cálculos – técnica de relojes */}
+
+            {/* Cálculos */}
             <Route path="calculations" element={<Calculations />} />
+
             {/* Características */}
             <Route path="caracteristicas" element={<Caracteristicas />} />
-            {/* Asistentes / wizards */}
+
+            {/* Asistentes (wizards) */}
             <Route path="alignment/new" element={<AlignmentWizard />} />
             <Route path="alignment/rim-face/new" element={<RimFaceWizard />} />
-            {/* Otras secciones */}
+
+            {/* Reportes */}
             <Route path="reports" element={<Reports />} />
-            {/* Cualquier ruta desconocida dentro de /app redirige al dashboard */}
+            <Route path="reports/:id/print" element={<ReportPrint />} />
+
+            {/* Fallback: redirigir a dashboard */}
             <Route path="*" element={<Navigate to="." replace />} />
           </Routes>
         </main>
@@ -44,11 +55,16 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Página pública principal */}
         <Route path="/" element={<Landing />} />
-        {/* Calculadora pública en modo demo */}
+
+        {/* Demo pública de calculadora */}
         <Route path="/demo/calculations" element={<CalculationsDemo />} />
+
         {/* Página pública de características */}
         <Route path="/caracteristicas" element={<CaracteristicasPublic />} />
+
+        {/* Área protegida (requiere login) */}
         <Route
           path="/app/*"
           element={
@@ -57,6 +73,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Fallback: redirigir al landing */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
