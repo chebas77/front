@@ -36,29 +36,32 @@ function analyzeClocks(ind, H) {
   const R90 = n(ind?.R90);
   const R180 = n(ind?.R180);
   const R270 = n(ind?.R270);
-  const R0   = Number.isFinite(Number(ind?.R0)) ? Number(ind?.R0)
-            : Number.isFinite(Number(ind?.R360)) ? Number(ind?.R360) : NaN;
+  const R0 = Number.isFinite(Number(ind?.R0)) ? Number(ind?.R0)
+    : Number.isFinite(Number(ind?.R360)) ? Number(ind?.R360) : NaN;
 
   const F90 = n(ind?.F90);
   const F180 = n(ind?.F180);
   const F270 = n(ind?.F270);
-  const F0   = Number.isFinite(Number(ind?.F0)) ? Number(ind?.F0)
-            : Number.isFinite(Number(ind?.F360)) ? Number(ind?.F360) : NaN;
+  const F0 = Number.isFinite(Number(ind?.F0)) ? Number(ind?.F0)
+    : Number.isFinite(Number(ind?.F360)) ? Number(ind?.F360) : NaN;
 
   const have0 = Number.isFinite(R0) && Number.isFinite(F0);
 
-  // Offsets (mils si tus diales están en enteros = mils)
-  const offsetV = (R90 - R270) / 2;
-  const offsetH = have0 ? (R0 - R180) / 2 : NaN;
+  // OFFSET (en mils)
+  const offsetV = R180 / 2;
+  // Si no hay R0, usar la diferencia lateral (R270 - R90)/2
+  const offsetH = have0 ? R0 / 2 : (R270 - R90) / 2;
 
-  // Angularidad (mils / inch) usando H (diámetro de giro) en pulgadas
+  // ANGULARIDAD (mils/inch)
   const Hnum = Number(H);
-  const angV = Number.isFinite(Hnum) && Hnum !== 0 ? (F90 - F270) / Hnum : NaN;
-  const angH = have0 && Number.isFinite(Hnum) && Hnum !== 0 ? (F0 - F180) / Hnum : NaN;
+  const angV = Number.isFinite(Hnum) && Hnum !== 0 ? F180 / Hnum : NaN;
+  // Si no hay F0, usar la diferencia (F270 - F90)/H
+  const angH = Number.isFinite(Hnum) && Hnum !== 0
+    ? (have0 ? (F0 - F180) / Hnum : (F270 - F90) / Hnum)
+    : NaN;
 
   return { have0, offsetV, offsetH, angV, angH };
 }
-
 /* ---------- Iconos según signo (usa AngPos/AngNeg y OffPos/OffNeg) ---------- */
 function IconAng({ value }) {
   if (!Number.isFinite(value)) return <Graphic file="None.bmp" alt="N/A" style={{ height: 22 }} />;
@@ -98,8 +101,10 @@ export default function ReportPrint() {
     })();
   }, [id]);
 
-  const clocks = useMemo(() => r ? analyzeClocks(r.indicators, r.dims?.H) : null, [r]);
-
+  const clocks = useMemo(() =>
+    r ? analyzeClocks(r.indicators, r.dims?.H, r.results) : null,
+    [r]
+  );
   if (err) {
     return (
       <div className="p-6 text-red-500">
@@ -162,25 +167,25 @@ export default function ReportPrint() {
         </div>
 
         {/* Date/Equipment */}
-        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px", marginBottom:"10px", fontSize:11}}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "10px", fontSize: 11 }}>
           <div><b>Date/Time of Alignment Data Creation:</b> {r.created_at ? new Date(r.created_at).toLocaleString() : "-"}</div>
           <div><b>Equipment ID (if any):</b> {r.equipment_id ?? "N/A"}</div>
         </div>
 
         {/* Inputs / Readings */}
-        <div className="grid-2" style={{marginBottom:"14px"}}>
+        <div className="grid-2" style={{ marginBottom: "14px" }}>
           {/* LEFT: Equipment */}
           <div className="panel">
             <div className="panel-title">Equipment Measurements (Constants, in Inches)</div>
-            <div style={{display:"grid", gridTemplateColumns:"160px 1fr", gap:"10px", alignItems:"start"}}>
-              <div style={{border:"1px solid #bbb", padding:"6px"}}>
+            <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: "10px", alignItems: "start" }}>
+              <div style={{ border: "1px solid #bbb", padding: "6px" }}>
                 {/* Usa un esquema de acople de tu set */}
-                <Graphic file="Rimface_1.bmp" alt="Equipment diagram" style={{maxWidth:"100%", display:"block"}} />
-                <div className="muted" style={{marginTop:"6px"}}>
+                <Graphic file="Rimface_1.bmp" alt="Equipment diagram" style={{ maxWidth: "100%", display: "block" }} />
+                <div className="muted" style={{ marginTop: "6px" }}>
                   <b>Sag (if any):</b> {typeof r.sag === "number" ? r.sag.toFixed(3) : (r.sag ?? "N/A")}
                 </div>
               </div>
-              <div style={{fontSize:11}}>
+              <div style={{ fontSize: 11 }}>
                 <div>H (Swing diameter): <b>{r.dims?.H ?? "N/A"}</b></div>
                 <div>D (Near feet → face): <b>{r.dims?.D ?? "N/A"}</b></div>
                 <div>E (Feet spacing): <b>{r.dims?.E ?? "N/A"}</b></div>
@@ -193,7 +198,7 @@ export default function ReportPrint() {
           {/* RIGHT: Readings */}
           <div className="panel">
             <div className="panel-title">Dial Indicator Readings (Use Whole Numbers)</div>
-            <div style={{display:"grid", gridTemplateColumns:"1fr 160px", gap:"10px", alignItems:"start"}}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 160px", gap: "10px", alignItems: "start" }}>
               <div>
                 <table className="table">
                   <thead>
@@ -216,108 +221,172 @@ export default function ReportPrint() {
                     </tr>
                   </tbody>
                 </table>
-                <div className="muted" style={{marginTop:"6px"}}>
+                <div className="muted" style={{ marginTop: "6px" }}>
                   Adjusted for SAG @90°: <b>{typeof r.sag === "number" ? r.sag.toFixed(3) : (r.sag ?? "0.000")}</b> • Dial numbers: 0.001" = 1
                 </div>
               </div>
-              <div style={{border:"1px solid #bbb", padding:"6px"}}>
+              <div style={{ border: "1px solid #bbb", padding: "6px" }}>
                 {/* Usa el círculo de lecturas de tu set */}
-                <Graphic file="Revdial_1.bmp" alt="Dial circle" style={{maxWidth:"100%", display:"block"}} />
+                <Graphic file="Revdial_1.bmp" alt="Dial circle" style={{ maxWidth: "100%", display: "block" }} />
               </div>
             </div>
           </div>
         </div>
 
         {/* Soft-Foot + Performer (opcional si lo usas) */}
-        <div className="panel" style={{marginBottom:"14px", fontSize:11}}>
-          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px"}}>
+        <div className="panel" style={{ marginBottom: "14px", fontSize: 11 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div>
               <div><b>Was Soft-Foot detected?</b>&nbsp;
                 <span>[ {r.softFootDetected ? "X" : " "} ] Yes&nbsp;&nbsp;[ {!r.softFootDetected ? "X" : " "} ] No</span>
               </div>
-              <div style={{marginTop:"6px"}}><b>If yes, was it corrected?</b>&nbsp;
+              <div style={{ marginTop: "6px" }}><b>If yes, was it corrected?</b>&nbsp;
                 <span>[ {r.softFootCorrected ? "X" : " "} ] Yes&nbsp;&nbsp;[ {!r.softFootCorrected ? "X" : " "} ] No</span>
               </div>
             </div>
             <div>
               <div><b>Person Performing the Alignment:</b></div>
-              <div style={{marginTop:"8px", borderTop:"1px solid #000", width:"240px", paddingTop:"4px"}}>
-                <span style={{fontWeight:"bold"}}>X</span>&nbsp;&nbsp;{r.performer_name || r.user_name || r.user_email || "N/A"}
+              <div style={{ marginTop: "8px", borderTop: "1px solid #000", width: "240px", paddingTop: "4px" }}>
+                <span style={{ fontWeight: "bold" }}>X</span>&nbsp;&nbsp;{r.performer_name || r.user_name || r.user_email || "N/A"}
               </div>
             </div>
           </div>
         </div>
 
-        {/* === BLOQUE estilo “última captura” (Angularity/Offset + paneles) === */}
-        <div className="section">
-          <h3>Calculated Results Based On Physical Dimensions and Input Above</h3>
+        {/* === BLOQUE estilo "última captura" (Angularity/Offset + paneles) === */}
+<div className="section">
+  <h3>Calculated Results Based On Physical Dimensions and Input Above</h3>
 
-          {/* KPIs superiores */}
-          <div className="grid-4" style={{marginBottom:"8px"}}>
-            <div className="kpi">
-              <div>Angularity (Vertical)</div>
-              <div className="valuebox">
-                <IconAng value={clocks?.angV} />
-                <b>{Number.isFinite(clocks?.angV) ? clocks.angV.toFixed(1) : "N/A"}</b>
-              </div>
-            </div>
-            <div className="kpi">
-              <div>Offset (Vertical)</div>
-              <div className="valuebox">
-                <IconOff value={clocks?.offsetV} />
-                <b>{Number.isFinite(clocks?.offsetV) ? clocks.offsetV.toFixed(1) : "N/A"}</b>
-                <span className="muted">mils</span>
-              </div>
-            </div>
-            <div className="kpi">
-              <div>Angularity (Horizontal)</div>
-              <div className="valuebox">
-                <IconAng value={clocks?.angH} />
-                <b>{Number.isFinite(clocks?.angH) ? clocks.angH.toFixed(1) : (clocks?.have0 ? "N/A" : "—")}</b>
-              </div>
-            </div>
-            <div className="kpi">
-              <div>Offset (Horizontal)</div>
-              <div className="valuebox">
-                <IconOff value={clocks?.offsetH} />
-                <b>{Number.isFinite(clocks?.offsetH) ? clocks.offsetH.toFixed(1) : (clocks?.have0 ? "N/A" : "—")}</b>
-                <span className="muted">mils</span>
-              </div>
-            </div>
+  {/* Fila principal con 3 columnas: Vertical | Thermal | Horizontal */}
+  <div style={{display:"grid", gridTemplateColumns:"2.2fr 1.3fr 2.2fr", gap:"10px", marginBottom:"14px", alignItems:"stretch"}}>
+    
+    {/* COLUMNA IZQUIERDA - Vertical */}
+    <div>
+      <div style={{fontSize:"10px", marginBottom:"6px", lineHeight:"1.2", fontWeight:"600"}}>
+        Angularity and offset to the right of the coupling - vertical direction:
+        <span style={{float:"right"}}>&gt;&gt;</span>
+      </div>
+      
+      <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"6px"}}>
+        {/* Angularity Vertical */}
+        <div style={{border:"1px solid #999", padding:"10px 8px", textAlign:"center", background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center"}}>
+          <div style={{fontSize:"11px", marginBottom:"6px", fontWeight:"600"}}>Angularity</div>
+          <div style={{fontSize:"22px", fontWeight:"700", marginBottom:"8px"}}>
+            {Number.isFinite(clocks?.angV) ? clocks.angV.toFixed(1) : "N/A"}
           </div>
-
-          {/* VN/VF/HN/HF como referencia */}
-          <table className="table" style={{marginBottom:"10px"}}>
-            <tbody>
-              <tr><td>Vertical — Near (VN)</td><td><b>{fmt(r.results?.VN)}</b> in <span className="pill">{fmtMils(r.results?.VN)} mils</span></td></tr>
-              <tr><td>Vertical — Far  (VF)</td><td><b>{fmt(r.results?.VF)}</b> in <span className="pill">{fmtMils(r.results?.VF)} mils</span></td></tr>
-              <tr><td>Horizontal — Near (HN)</td><td><b>{fmt(r.results?.HN)}</b> in <span className="pill">{fmtMils(r.results?.HN)} mils</span></td></tr>
-              <tr><td>Horizontal — Far  (HF)</td><td><b>{fmt(r.results?.HF)}</b> in <span className="pill">{fmtMils(r.results?.HF)} mils</span></td></tr>
-            </tbody>
-          </table>
-
-          {/* Paneles inferiores (tus imágenes) */}
-          <div className="grid-2">
-            <div className="callout">
-              <h4>(+) = Add Shims &nbsp;&nbsp; (−) = Remove Shims</h4>
-              <Graphic file="Shaft-Coupling1.bmp" alt="Panel Shims" style={{width:"100%", display:"block"}} />
-            </div>
-            <div className="callout">
-              <h4>(+) = Push Back &gt; Front &nbsp;&nbsp; (−) = Push Front &gt; Back</h4>
-              <Graphic file="Shaft-Coupling2.bmp" alt="Panel Push" style={{width:"100%", display:"block"}} />
-            </div>
-          </div>
-
-          <div className="muted" style={{marginTop:8}}>
-            *Las direcciones (+/−) dependen de tu convención de cero y sentido de lectura. Los valores son magnitudes objetivo.
+          <div style={{display:"flex", justifyContent:"center"}}>
+            <IconAng value={clocks?.angV} />
           </div>
         </div>
+        
+        {/* Offset Vertical */}
+        <div style={{border:"1px solid #999", padding:"10px 8px", textAlign:"center", background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center"}}>
+          <div style={{fontSize:"11px", marginBottom:"6px", fontWeight:"600"}}>Offset</div>
+          <div style={{fontSize:"22px", fontWeight:"700", marginBottom:"8px"}}>
+            {Number.isFinite(clocks?.offsetV) ? clocks.offsetV.toFixed(1) : "N/A"}
+          </div>
+          <div style={{display:"flex", justifyContent:"center"}}>
+            <IconOff value={clocks?.offsetV} />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* COLUMNA CENTRAL - Thermal Expansion */}
+    <div style={{border:"1px solid #999", padding:"16px 12px", textAlign:"center", display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", background:"#f9f9f9"}}>
+      <div style={{fontSize:"10px", fontWeight:"600", marginBottom:"10px", lineHeight:"1.3"}}>
+        Calculated Thermal<br/>Expansion (if available):
+      </div>
+      <div style={{fontSize:"20px", fontWeight:"700", marginBottom:"4px"}}>N/A</div>
+      <div style={{fontSize:"9px", color:"#666"}}>(Mils)</div>
+    </div>
+
+    {/* COLUMNA DERECHA - Horizontal */}
+    <div>
+      <div style={{fontSize:"10px", marginBottom:"6px", lineHeight:"1.2", fontWeight:"600"}}>
+        Angularity and offset to the right of the coupling - horizontal plane:
+        <span style={{float:"right"}}>&lt;&lt;</span>
+      </div>
+      
+      <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"6px"}}>
+        {/* Angularity Horizontal */}
+        <div style={{border:"1px solid #999", padding:"10px 8px", textAlign:"center", background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center"}}>
+          <div style={{fontSize:"11px", marginBottom:"6px", fontWeight:"600"}}>Angularity</div>
+          <div style={{fontSize:"22px", fontWeight:"700", marginBottom:"8px"}}>
+            {Number.isFinite(clocks?.angH) ? clocks.angH.toFixed(1) : "N/A"}
+          </div>
+          <div style={{display:"flex", justifyContent:"center"}}>
+            <IconAng value={clocks?.angH} />
+          </div>
+        </div>
+        
+        {/* Offset Horizontal */}
+        <div style={{border:"1px solid #999", padding:"10px 8px", textAlign:"center", background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center"}}>
+          <div style={{fontSize:"11px", marginBottom:"6px", fontWeight:"600"}}>Offset</div>
+          <div style={{fontSize:"22px", fontWeight:"700", marginBottom:"8px"}}>
+            {Number.isFinite(clocks?.offsetH) ? clocks.offsetH.toFixed(1) : "N/A"}
+          </div>
+          <div style={{display:"flex", justifyContent:"center"}}>
+            <IconOff value={clocks?.offsetH} />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* Paneles inferiores con diagramas de corrección */}
+  <div className="grid-2" style={{ marginTop: "12px" }}>
+    {/* Panel Vertical - Shims */}
+    <div className="callout">
+      <h4>(+) = Add Shims &nbsp;&nbsp;&nbsp; (−) = Remove Shims</h4>
+      <div style={{ border: "1px solid #999", padding: "4px", background: "#fff", marginBottom: "8px" }}>
+        <Graphic file="imagen1.png" alt="Shims Correction" style={{ width: "100%", display: "block" }} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "4px", fontSize: "11px", textAlign: "center" }}>
+        <div style={{ border: "1px solid #999", padding: "6px 4px", background: "#f5f5f5" }}><b>N/A</b></div>
+        <div style={{ border: "1px solid #999", padding: "6px 4px", background: "#f5f5f5" }}><b>N/A</b></div>
+        <div style={{ border: "1px solid #999", padding: "6px 4px", background: "#fff" }}><b>{fmt(r.results?.VN)}</b></div>
+        <div style={{ border: "1px solid #999", padding: "6px 4px", background: "#fff" }}><b>{fmt(r.results?.VF)}</b></div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "4px", fontSize: "9px", textAlign: "center", marginTop: "2px" }}>
+        <div>Back Feet</div>
+        <div>Front Feet</div>
+        <div>Front Feet</div>
+        <div>Back Feet</div>
+      </div>
+    </div>
+
+    {/* Panel Horizontal - Push */}
+    <div className="callout">
+      <h4>(+) = Push Back &gt; Front &nbsp;&nbsp;&nbsp; (−) = Push Front &gt; Back</h4>
+      <div style={{ border: "1px solid #999", padding: "4px", background: "#fff", marginBottom: "8px" }}>
+        <Graphic file="imagen2.png" alt="Push Correction" style={{ width: "100%", display: "block" }} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "4px", fontSize: "11px", textAlign: "center" }}>
+        <div style={{ border: "1px solid #999", padding: "6px 4px", background: "#f5f5f5" }}><b>N/A</b></div>
+        <div style={{ border: "1px solid #999", padding: "6px 4px", background: "#f5f5f5" }}><b>N/A</b></div>
+        <div style={{ border: "1px solid #999", padding: "6px 4px", background: "#fff" }}><b>{fmt(r.results?.HN)}</b></div>
+        <div style={{ border: "1px solid #999", padding: "6px 4px", background: "#fff" }}><b>{fmt(r.results?.HF)}</b></div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "4px", fontSize: "9px", textAlign: "center", marginTop: "2px" }}>
+        <div>Back Feet</div>
+        <div>Front Feet</div>
+        <div>Front Feet</div>
+        <div>Back Feet</div>
+      </div>
+    </div>
+  </div>
+
+  <div className="muted" style={{ marginTop: 8 }}>
+    *Las direcciones (+/−) dependen de tu convención de cero y sentido de lectura. Los valores son magnitudes objetivo.
+  </div>
+</div>
 
         {/* Notes */}
         {r.description && (
           <div className="section">
             <h3>Notes</h3>
-            <div style={{whiteSpace:"pre-wrap", fontSize:11}}>{r.description}</div>
+            <div style={{ whiteSpace: "pre-wrap", fontSize: 11 }}>{r.description}</div>
           </div>
         )}
 

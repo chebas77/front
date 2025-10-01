@@ -8,17 +8,48 @@ import { ThemeToggle } from "./theme-toggle";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
+async function fetchJsonSafe(url, signal) {
+  try {
+    const res = await fetch(url, { credentials: "include", signal });
+    const ct = res.headers.get("content-type") || "";
+    const isJson = ct.includes("application/json");
+    const body = isJson ? await res.json().catch(() => null) : null;
+
+    if (!res.ok) {
+      const msg = body?.error || body?.message || `Error ${res.status} al consultar ${url}`;
+      return { ok: false, error: msg, status: res.status };
+    }
+
+    // Normaliza posibles formatos
+    const data = Array.isArray(body?.items)
+      ? body.items
+      : Array.isArray(body?.results)
+      ? body.results
+      : Array.isArray(body)
+      ? body
+      : [];
+
+    return { ok: true, data };
+  } catch (e) {
+    if (e.name === "AbortError") return { ok: false, aborted: true };
+    return { ok: false, error: e.message || "Fallo de red" };
+  }
+}
+
 export function Header() {
   const navigate = useNavigate();
   const location = useLocation();
+
   const [term, setTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [results, setResults] = useState({ projects: [], reports: [] });
   const [open, setOpen] = useState(false);
+
   const searchRef = useRef(null);
   const abortRef = useRef(null);
 
+  // Cierra el popup al click fuera
   useEffect(() => {
     function handleClickOutside(event) {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -26,100 +57,97 @@ export function Header() {
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Reset al cambiar de ruta
   useEffect(() => {
     setOpen(false);
     setTerm("");
     setResults({ projects: [], reports: [] });
+    setError("");
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!term.trim()) {
-      if (abortRef.current) {
-        abortRef.current.abort();
-        abortRef.current = null;
-      }
+    const trimmed = term.trim();
+
+    // Cancelar petición previa
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+
+    // Reglas de entrada
+    if (!trimmed) {
       setLoading(false);
       setError("");
       setResults({ projects: [], reports: [] });
       return;
     }
-
-    if (term.trim().length < 2) {
+    if (trimmed.length < 2) {
+      setLoading(false);
       setError("");
       setResults({ projects: [], reports: [] });
-      setLoading(false);
       return;
     }
 
     const controller = new AbortController();
-    abortRef.current?.abort();
     abortRef.current = controller;
 
-    const timeout = setTimeout(async () => {
+    const t = setTimeout(async () => {
       setLoading(true);
       setError("");
 
-      try {
-        const query = encodeURIComponent(term.trim());
-        const endpoints = [
-          { key: "projects", url: `${API}/projects/search?q=${query}` },
-          { key: "reports", url: `${API}/reports/search?q=${query}` },
-        ];
+      const q = encodeURIComponent(trimmed);
+      const endpoints = [
+        { key: "projects", url: `${API}/projects/search?q=${q}` },
+        { key: "reports",  url: `${API}/reports/search?q=${q}` },
+      ];
 
-        const settled = await Promise.all(
-          endpoints.map(async ({ key, url }) => {
-            const res = await fetch(url, { credentials: "include", signal: controller.signal });
-            const contentType = res.headers.get("content-type") || "";
-            const isJson = contentType.includes("application/json");
-            const payload = isJson ? await res.json() : null;
-            if (!res.ok) {
-              const message = payload?.error || payload?.message || `Error al buscar ${key}`;
-              throw new Error(message);
-            }
-            const data = Array.isArray(payload?.items)
-              ? payload.items
-              : Array.isArray(payload?.results)
-              ? payload.results
-              : Array.isArray(payload)
-              ? payload
-              : [];
-            return { key, data };
-          })
-        );
+      const settled = await Promise.allSettled(
+        endpoints.map(({ key, url }) =>
+          fetchJsonSafe(url, controller.signal).then((r) => ({ key, ...r }))
+        )
+      );
 
-        const nextResults = { projects: [], reports: [] };
-        for (const item of settled) {
-          if (!item) continue;
-          if (item.key === "projects") nextResults.projects = item.data.map(normalizeProject).filter(Boolean);
-          if (item.key === "reports") nextResults.reports = item.data.map(normalizeReport).filter(Boolean);
+      // Armar resultados parciales
+      const next = { projects: [], reports: [] };
+      const errs = [];
+
+      for (const s of settled) {
+        if (s.status !== "fulfilled") {
+          errs.push("Fallo de red");
+          continue;
         }
-        setResults(nextResults);
-      } catch (err) {
-        if (err.name === "AbortError") return;
-        console.error("[Header] search error", err);
-        setError(err?.message || "No se pudo realizar la búsqueda.");
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-          abortRef.current = null;
+        const { key, ok, data, error: errMsg, aborted } = s.value;
+        if (aborted) continue; // efecto será limpiado
+        if (ok) {
+          if (key === "projects") next.projects = (data || []).map(normalizeProject).filter(Boolean);
+          if (key === "reports")  next.reports  = (data || []).map(normalizeReport).filter(Boolean);
+        } else {
+          errs.push(`${key}: ${errMsg || "error"}`);
         }
       }
+
+      // Si se abortó mientras esperábamos, no tocar estado
+      if (controller.signal.aborted) return;
+
+      setResults(next);
+      setError(errs.length ? `Problemas con: ${errs.join(" | ")}` : "");
+      setLoading(false);
+      abortRef.current = null;
     }, 300);
 
     return () => {
-      clearTimeout(timeout);
+      clearTimeout(t);
       controller.abort();
     };
   }, [term]);
 
-  const hasResults = useMemo(() => {
-    return (results.projects?.length ?? 0) > 0 || (results.reports?.length ?? 0) > 0;
-  }, [results]);
+  const hasResults = useMemo(
+    () => (results.projects?.length ?? 0) > 0 || (results.reports?.length ?? 0) > 0,
+    [results]
+  );
 
   const firstResult = useMemo(() => {
     if (results.projects && results.projects.length) return { type: "project", item: results.projects[0] };
@@ -153,17 +181,13 @@ export function Header() {
     setTerm("");
     setResults({ projects: [], reports: [] });
     if (type === "project") {
-      if (item.id != null) {
-        navigate(`/app/calculations?project=${encodeURIComponent(item.id)}`);
-      } else {
-        navigate("/app");
-      }
+      item.id != null
+        ? navigate(`/app/calculations?project=${encodeURIComponent(item.id)}`)
+        : navigate("/app");
     } else if (type === "report") {
-      if (item.id != null) {
-        navigate(`/app/reports/${item.id}/print`);
-      } else {
-        navigate("/app/reports");
-      }
+      item.id != null
+        ? navigate(`/app/reports/${item.id}/print`)
+        : navigate("/app/reports");
     }
   }
 
@@ -181,21 +205,14 @@ export function Header() {
               placeholder="Buscar proyectos o reportes"
               className="pl-10 w-72"
               value={term}
-              onChange={(event) => {
-                setTerm(event.target.value);
-                setOpen(true);
-              }}
-              onFocus={() => {
-                if (term.length >= 2) setOpen(true);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && firstResult) {
-                  event.preventDefault();
+              onChange={(e) => { setTerm(e.target.value); setOpen(true); }}
+              onFocus={() => { if (term.trim().length >= 2) setOpen(true); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && firstResult) {
+                  e.preventDefault();
                   handleSelect(firstResult.type, firstResult.item);
                 }
-                if (event.key === "Escape") {
-                  setOpen(false);
-                }
+                if (e.key === "Escape") setOpen(false);
               }}
             />
             {open && (
@@ -206,13 +223,14 @@ export function Header() {
                 <div className="max-h-80 overflow-y-auto">
                   {loading && (
                     <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Buscando...
+                      <Loader2 className="h-4 w-4 animate-spin" /> Buscando...
                     </div>
                   )}
+
                   {!loading && error && (
                     <div className="px-4 py-3 text-sm text-destructive">{error}</div>
                   )}
+
                   {!loading && !error && !hasResults && (
                     <div className="px-4 py-3 text-sm text-muted-foreground">
                       {term.trim().length < 2
@@ -220,22 +238,23 @@ export function Header() {
                         : "Sin resultados para esta búsqueda."}
                     </div>
                   )}
-                  {!loading && !error && results.projects?.length > 0 && (
+
+                  {!loading && results.projects?.length > 0 && (
                     <div>
                       <div className="px-4 pt-3 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                         Proyectos
                       </div>
                       <ul className="py-1">
-                        {results.projects.map((project) => (
-                          <li key={`project-${project.id ?? project.name}`}>
+                        {results.projects.map((p) => (
+                          <li key={`project-${p.id ?? p.name}`}>
                             <button
                               type="button"
                               className="w-full px-4 py-2 text-left text-sm hover:bg-muted"
-                              onClick={() => handleSelect("project", project)}
+                              onClick={() => handleSelect("project", p)}
                             >
-                              <div className="font-medium text-card-foreground">{project.name}</div>
-                              {project.status && (
-                                <div className="text-xs text-muted-foreground">Estado: {project.status}</div>
+                              <div className="font-medium text-card-foreground">{p.name}</div>
+                              {p.status && (
+                                <div className="text-xs text-muted-foreground">Estado: {p.status}</div>
                               )}
                             </button>
                           </li>
@@ -243,22 +262,23 @@ export function Header() {
                       </ul>
                     </div>
                   )}
-                  {!loading && !error && results.reports?.length > 0 && (
+
+                  {!loading && results.reports?.length > 0 && (
                     <div>
                       <div className="px-4 pt-3 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                         Reportes
                       </div>
                       <ul className="py-1">
-                        {results.reports.map((report) => (
-                          <li key={`report-${report.id ?? report.title}`}>
+                        {results.reports.map((r) => (
+                          <li key={`report-${r.id ?? r.title}`}>
                             <button
                               type="button"
                               className="w-full px-4 py-2 text-left text-sm hover:bg-muted"
-                              onClick={() => handleSelect("report", report)}
+                              onClick={() => handleSelect("report", r)}
                             >
-                              <div className="font-medium text-card-foreground">{report.title}</div>
+                              <div className="font-medium text-card-foreground">{r.title}</div>
                               <div className="text-xs text-muted-foreground">
-                                {report.method ? `Método: ${report.method}` : "Reporte disponible"}
+                                {r.method ? `Método: ${r.method}` : "Reporte disponible"}
                               </div>
                             </button>
                           </li>
@@ -271,13 +291,9 @@ export function Header() {
             )}
           </div>
 
-          <Button variant="ghost" size="sm">
-            <Bell className="h-5 w-5" />
-          </Button>
+          <Button variant="ghost" size="sm"><Bell className="h-5 w-5" /></Button>
           <ThemeToggle />
-          <Button variant="ghost" size="sm">
-            <User className="h-5 w-5" />
-          </Button>
+          <Button variant="ghost" size="sm"><User className="h-5 w-5" /></Button>
         </div>
       </div>
     </header>
