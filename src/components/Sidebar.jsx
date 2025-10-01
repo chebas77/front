@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Cog,
   FileText,
+  FolderOpen,
   Home,
   LogOut,
   Sparkles,
@@ -19,6 +20,7 @@ import { useAuth } from "../hooks/use-auth";
 const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const RAW_ITEMS = [
   { icon: Home, label: "Dashboard", href: "/app" },
+  { icon: FolderOpen, label: "Proyectos", href: "/app/projects" },
   { icon: Calculator, label: "Cálculos", href: "/app/calculations" },
   { icon: FileText, label: "Reportes", href: "/app/reports" },
   { icon: Sparkles, label: "Características", href: "/app/caracteristicas" },

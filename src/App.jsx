@@ -10,6 +10,7 @@ import AlignmentWizard from "./pages/AlignmentWizard";
 import RimFaceWizard from "./pages/RimFaceWizard";
 import Reports from "./pages/Reports";
 import ReportPrint from "./pages/ReportPrint.jsx";
+import Projects from "./pages/Projects";
 
 // Componentes de layout
 import { Sidebar } from "./components/Sidebar";
@@ -30,6 +31,9 @@ function AppShell() {
 
             {/* Cálculos */}
             <Route path="calculations" element={<Calculations />} />
+
+            {/* Proyectos */}
+            <Route path="projects" element={<Projects />} />
 
             {/* Características */}
             <Route path="caracteristicas" element={<Caracteristicas />} />
