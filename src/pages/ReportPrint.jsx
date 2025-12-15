@@ -152,9 +152,25 @@ export default function ReportPrint() {
         .pill { display:inline-block; border:1px solid #aaa; padding:2px 6px; border-radius:12px; font-size:10px; background:#f6f6f6; }
       `}</style>
 
-      <div className="no-print p-4 flex gap-2">
-        <button onClick={() => window.print()} className="px-3 py-2 rounded bg-black text-white">Imprimir</button>
-        <Link to="/app/reports" className="px-3 py-2 rounded border">Volver</Link>
+      <div className="no-print p-4 flex gap-2 justify-center">
+        <button 
+          onClick={() => window.print()} 
+          className="px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
+        >
+          🖨️ Imprimir
+        </button>
+        <button
+          onClick={() => window.location.href = `/app/calculations?edit=${id}`}
+          className="px-4 py-2 rounded-md bg-green-600 text-white font-medium hover:bg-green-700 transition-colors"
+        >
+          ✏️ Editar reporte
+        </button>
+        <Link 
+          to="/app/reports" 
+          className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+        >
+          ← Volver
+        </Link>
       </div>
 
       <div className="report-wrapper">

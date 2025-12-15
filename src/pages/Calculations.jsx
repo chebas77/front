@@ -1,7 +1,8 @@
 // src/pages/Calculations.jsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
+import { useSearchParams } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
 // arriba del componente
@@ -9,6 +10,8 @@ const LOGIN_URL = `${API}/auth/google?redirect=/app/calculations`; // <-- NUEVO
 
 export default function Calculations({ demo = false }) {
   const isDemo = useMemo(() => !!demo, [demo]);
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("edit");
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -16,6 +19,9 @@ export default function Calculations({ demo = false }) {
   const [error, setError] = useState("");
   const [pdfUrl, setPdfUrl] = useState("");
   const [res, setRes] = useState(null); // { VN,VF,HN,HF }
+  const [savedReportId, setSavedReportId] = useState(null); // ID del reporte guardado
+  const [reportSaved, setReportSaved] = useState(false); // Si ya se guardó el reporte
+  const [hasChanges, setHasChanges] = useState(false); // Si hubo cambios después de guardar
 
   // Step 1: Physical Data Input
   const [phy, setPhy] = useState({
@@ -38,8 +44,75 @@ export default function Calculations({ demo = false }) {
     SAG: "0",
   });
 
-  const onPhy = (e) => setPhy((s) => ({ ...s, [e.target.name]: e.target.value }));
-  const onInd = (e) => setInd((s) => ({ ...s, [e.target.name]: e.target.value }));
+  const onPhy = (e) => {
+    setPhy((s) => ({ ...s, [e.target.name]: e.target.value }));
+    if (reportSaved) setHasChanges(true);
+  };
+  const onInd = (e) => {
+    setInd((s) => ({ ...s, [e.target.name]: e.target.value }));
+    if (reportSaved) setHasChanges(true);
+  };
+
+  // Cargar datos del reporte si hay parámetro edit
+  useEffect(() => {
+    if (!editId) return;
+    
+    let cancel = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/api/reports/${editId}`, {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
+        const json = await res.json();
+        if (!res.ok || !json.ok) throw new Error(json.error || "Error al cargar el reporte");
+        
+        if (cancel) return;
+        
+        const report = json.report;
+        const dims = typeof report.dims === "string" ? JSON.parse(report.dims) : report.dims || {};
+        const indicators = typeof report.indicators === "string" ? JSON.parse(report.indicators) : report.indicators || {};
+        const results = typeof report.results === "string" ? JSON.parse(report.results) : report.results || {};
+        
+        // Cargar dimensiones
+        setPhy({
+          H: String(dims.H || ""),
+          D: String(dims.D || ""),
+          E: String(dims.E || ""),
+          skipLeftSide: !dims.F && !dims.G,
+          F: String(dims.F || ""),
+          G: String(dims.G || ""),
+        });
+        
+        // Cargar indicadores
+        setInd({
+          R90: String(indicators.R90 || ""),
+          R180: String(indicators.R180 || ""),
+          R270: String(indicators.R270 || ""),
+          F90: String(indicators.F90 || ""),
+          F180: String(indicators.F180 || ""),
+          F270: String(indicators.F270 || ""),
+          SAG: String(report.sag || "0"),
+        });
+        
+        // Si hay resultados, mostrarlos
+        if (results && (results.VN || results.VF || results.HN || results.HF)) {
+          setRes(results);
+          setStep(3); // Ir directamente al paso de resultados
+        }
+        
+        // Marcar que este reporte ya está guardado
+        setSavedReportId(editId);
+        setReportSaved(true);
+        setHasChanges(false);
+      } catch (e) {
+        console.error("Error cargando reporte:", e);
+        setError(`No se pudo cargar el reporte: ${e.message}`);
+      }
+    })();
+    
+    return () => { cancel = true; };
+  }, [editId]);
 
   const num = (v) => Number(v);
   const empty = (o, keys) => keys.filter((k) => String(o[k]).trim() === "");
@@ -178,8 +251,13 @@ export default function Calculations({ demo = false }) {
       console.table(payload.results);
       console.groupEnd();
 
-      const r = await fetch(`${API}/api/reports`, {
-        method: "POST",
+      // Si ya hay un reporte guardado y estamos editando, hacer PUT en lugar de POST
+      const isUpdate = savedReportId && hasChanges;
+      const url = isUpdate ? `${API}/api/reports/${savedReportId}` : `${API}/api/reports`;
+      const method = isUpdate ? "PUT" : "POST";
+      
+      const r = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(payload),
@@ -200,6 +278,14 @@ export default function Calculations({ demo = false }) {
       }
 
       if (isJson && data.pdfUrl) setPdfUrl(data.pdfUrl);
+      
+      // Marcar como guardado y obtener el ID del reporte
+      if (isJson && data.ok) {
+        const reportId = data.report?.id || data.id || savedReportId;
+        setSavedReportId(reportId);
+        setReportSaved(true);
+        setHasChanges(false);
+      }
     } catch (e) {
       console.error("[REPORT] Error:", e);
       setError(e.message);
@@ -377,89 +463,220 @@ export default function Calculations({ demo = false }) {
 
       {/* Step 3 of 3: Review / Final + Results */}
       {step === 3 && (
-        <Card className="bg-card">
-          <CardHeader>
-            <CardTitle className="text-card-foreground">Step 3 of 3: Review / Final Results</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Resumen */}
-            <div className="grid md:grid-cols-2 gap-6 text-sm">
-              <div>
-                <h4 className="font-semibold mb-2">Physical dimensions (inches)</h4>
-                <ul className="space-y-1 text-muted-foreground">
-                  <li>H: {phy.H}</li>
-                  <li>D: {phy.D}</li>
-                  <li>E: {phy.E}</li>
-                  {!phy.skipLeftSide && (
-                    <>
-                      <li>F: {phy.F}</li>
-                      <li>G: {phy.G}</li>
-                    </>
-                  )}
-                </ul>
+        <div className="space-y-6">
+          {/* Vista previa del reporte */}
+          <Card className="bg-card">
+            <CardHeader className="border-b border-border">
+              <CardTitle className="text-card-foreground">Vista Previa del Reporte</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {/* Header del reporte */}
+              <div className="text-center mb-6 pb-4 border-b border-border">
+                <h2 className="text-2xl font-bold mb-2">Alignment Procedure Report</h2>
+                <p className="text-sm text-muted-foreground">Rim and Face Method</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date().toLocaleString()}
+                </p>
               </div>
-              <div>
-                <h4 className="font-semibold mb-2">Dial indicator readings</h4>
-                <ul className="space-y-1 text-muted-foreground">
-                  <li>
-                    Rim — 90°:{ind.R90}, 180°:{ind.R180}, 270°:{ind.R270}
-                  </li>
-                  <li>
-                    Face — 90°:{ind.F90}, 180°:{ind.F180}, 270°:{ind.F270}
-                  </li>
-                  <li>Adjusted for SAG @90°: {ind.SAG}</li>
-                </ul>
-              </div>
-            </div>
 
-            {/* Resultados Near/Far */}
-            {res && (
-              <div className="grid md:grid-cols-4 gap-4">
-                <ResultCard title="Vertical — Near" value={res.VN} note="Add/Remove shims (Front Feet)" />
-                <ResultCard title="Vertical — Far" value={res.VF} note="Add/Remove shims (Back Feet)" />
-                <ResultCard title="Horizontal — Near" value={res.HN} note="Push Back > Front" />
-                <ResultCard title="Horizontal — Far" value={res.HF} note="Push Front > Back" />
-              </div>
-            )}
-
-            {/* Crear Reporte (PDF + BD) */}
-            {res && !isDemo && (
-              <>
-                <ReportMeta onCreate={handleCreateReport} creating={creating} />
-                {pdfUrl && (
-                  <div className="text-sm mt-2">
-                    Reporte listo:&nbsp;
-                    <a className="text-primary underline" href={pdfUrl} target="_blank" rel="noreferrer">
-                      Descargar PDF
-                    </a>
+              {/* Sección de datos de entrada */}
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-lg border-b border-border pb-2">
+                    Equipment Measurements (inches)
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between py-1 px-2 rounded hover:bg-accent/50">
+                      <span className="text-muted-foreground">H (Swing diameter):</span>
+                      <span className="font-medium">{phy.H}</span>
+                    </div>
+                    <div className="flex justify-between py-1 px-2 rounded hover:bg-accent/50">
+                      <span className="text-muted-foreground">D (Near feet → face):</span>
+                      <span className="font-medium">{phy.D}</span>
+                    </div>
+                    <div className="flex justify-between py-1 px-2 rounded hover:bg-accent/50">
+                      <span className="text-muted-foreground">E (Feet spacing):</span>
+                      <span className="font-medium">{phy.E}</span>
+                    </div>
+                    {!phy.skipLeftSide && (
+                      <>
+                        <div className="flex justify-between py-1 px-2 rounded hover:bg-accent/50">
+                          <span className="text-muted-foreground">F (Left front):</span>
+                          <span className="font-medium">{phy.F}</span>
+                        </div>
+                        <div className="flex justify-between py-1 px-2 rounded hover:bg-accent/50">
+                          <span className="text-muted-foreground">G (Left back):</span>
+                          <span className="font-medium">{phy.G}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-lg border-b border-border pb-2">
+                    Dial Indicator Readings
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="py-1 px-2 rounded hover:bg-accent/50">
+                      <div className="font-medium mb-1">Rim</div>
+                      <div className="flex gap-4 text-muted-foreground">
+                        <span>90°: <strong className="text-foreground">{ind.R90}</strong></span>
+                        <span>180°: <strong className="text-foreground">{ind.R180}</strong></span>
+                        <span>270°: <strong className="text-foreground">{ind.R270}</strong></span>
+                      </div>
+                    </div>
+                    <div className="py-1 px-2 rounded hover:bg-accent/50">
+                      <div className="font-medium mb-1">Face</div>
+                      <div className="flex gap-4 text-muted-foreground">
+                        <span>90°: <strong className="text-foreground">{ind.F90}</strong></span>
+                        <span>180°: <strong className="text-foreground">{ind.F180}</strong></span>
+                        <span>270°: <strong className="text-foreground">{ind.F270}</strong></span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between py-1 px-2 rounded hover:bg-accent/50">
+                      <span className="text-muted-foreground">SAG adjustment @90°:</span>
+                      <span className="font-medium">{ind.SAG}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Resultados calculados */}
+              {res && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg border-b border-border pb-2">
+                    Calculated Results
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Vertical */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-muted-foreground">Vertical Direction</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-accent/30 rounded-lg p-4 text-center">
+                          <div className="text-xs text-muted-foreground mb-1">Near (Front Feet)</div>
+                          <div className="text-3xl font-bold text-primary">{Number(res.VN).toFixed(2)}</div>
+                          <div className="text-xs text-muted-foreground mt-2">
+                            {Number(res.VN) >= 0 ? "Add shims" : "Remove shims"}
+                          </div>
+                        </div>
+                        <div className="bg-accent/30 rounded-lg p-4 text-center">
+                          <div className="text-xs text-muted-foreground mb-1">Far (Back Feet)</div>
+                          <div className="text-3xl font-bold text-primary">{Number(res.VF).toFixed(2)}</div>
+                          <div className="text-xs text-muted-foreground mt-2">
+                            {Number(res.VF) >= 0 ? "Add shims" : "Remove shims"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Horizontal */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-muted-foreground">Horizontal Direction</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-accent/30 rounded-lg p-4 text-center">
+                          <div className="text-xs text-muted-foreground mb-1">Near</div>
+                          <div className="text-3xl font-bold text-primary">{Number(res.HN).toFixed(2)}</div>
+                          <div className="text-xs text-muted-foreground mt-2">
+                            {Number(res.HN) >= 0 ? "Push Back → Front" : "Push Front → Back"}
+                          </div>
+                        </div>
+                        <div className="bg-accent/30 rounded-lg p-4 text-center">
+                          <div className="text-xs text-muted-foreground mb-1">Far</div>
+                          <div className="text-3xl font-bold text-primary">{Number(res.HF).toFixed(2)}</div>
+                          <div className="text-xs text-muted-foreground mt-2">
+                            {Number(res.HF) >= 0 ? "Push Front → Back" : "Push Back → Front"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Formulario para crear/actualizar reporte */}
+          {res && !isDemo && (
+            <Card className="bg-card">
+              <CardHeader>
+                <CardTitle className="text-card-foreground">
+                  {reportSaved && !hasChanges ? "Reporte Guardado" : hasChanges ? "Actualizar Reporte" : "Guardar Reporte"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {reportSaved && !hasChanges ? (
+                  <div className="text-sm p-4 bg-green-500/10 border border-green-500/30 rounded-md">
+                    <div className="flex items-start gap-3">
+                      <div className="text-green-600 text-2xl">✓</div>
+                      <div className="flex-1">
+                        <p className="font-medium text-green-700 mb-1">Este reporte ya está guardado</p>
+                        <p className="text-muted-foreground text-xs">
+                          Si deseas guardar un nuevo cálculo, modifica los valores en los pasos anteriores.
+                        </p>
+                        {pdfUrl && (
+                          <a className="text-primary underline font-medium text-sm mt-2 inline-block" href={pdfUrl} target="_blank" rel="noreferrer">
+                            Ver/Descargar PDF
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <ReportMeta 
+                      onCreate={handleCreateReport} 
+                      creating={creating}
+                      isUpdate={hasChanges}
+                    />
+                    {pdfUrl && (
+                      <div className="text-sm p-3 bg-green-500/10 border border-green-500/30 rounded-md">
+                        ✓ Reporte {hasChanges ? 'actualizado' : 'creado'} exitosamente.{" "}
+                        <a className="text-primary underline font-medium" href={pdfUrl} target="_blank" rel="noreferrer">
+                          Ver/Descargar PDF
+                        </a>
+                      </div>
+                    )}
+                  </>
                 )}
-              </>
-            )}
+              </CardContent>
+            </Card>
+          )}
 
-            {/* Aviso en DEMO en lugar del formulario de reporte */}
-            {res && isDemo && (
-  <div className="rounded-md border border-yellow-400/30 bg-yellow-500/10 p-3 text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-    <span>
-      Para guardar o exportar a PDF, inicia sesión y usa la versión completa en{" "}
-      <span className="font-medium">/app/calculations</span>.
-    </span>
-    <a href={LOGIN_URL} className="shrink-0">
-      <Button size="sm" variant="default">Iniciar sesión y continuar</Button>
-    </a>
-  </div>
-)}
+          {/* Aviso en DEMO */}
+          {res && isDemo && (
+            <Card className="bg-card border-yellow-400/30">
+              <CardContent className="py-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <span className="text-sm">
+                    Para guardar o exportar a PDF, inicia sesión y usa la versión completa en{" "}
+                    <span className="font-medium">/app/calculations</span>.
+                  </span>
+                  <a href={LOGIN_URL} className="shrink-0">
+                    <Button size="sm" variant="default">Iniciar sesión y continuar</Button>
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(2)}>
-                &lt; Previous
-              </Button>
-              <Button onClick={() => window.print()}>Print (temporal)</Button>
-            </div>
-
-            {error && <div className="text-destructive text-sm">{error}</div>}
-          </CardContent>
-        </Card>
+          {/* Navegación */}
+          <Card className="bg-card">
+            <CardContent className="py-4">
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setStep(2)}>
+                  ← Volver a lecturas
+                </Button>
+                {pdfUrl && (
+                  <Button onClick={() => window.location.reload()}>
+                    Nuevo cálculo
+                  </Button>
+                )}
+              </div>
+              {error && <div className="text-destructive text-sm mt-3">{error}</div>}
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );
@@ -489,14 +706,14 @@ function ResultCard({ title, value, note }) {
   );
 }
 
-function ReportMeta({ onCreate, creating }) {
+function ReportMeta({ onCreate, creating, isUpdate }) {
   const [title, setTitle] = useState("");
   const [equipmentId, setEquipmentId] = useState("");
   const [description, setDescription] = useState("");
 
   return (
     <div className="space-y-3">
-      <h3 className="font-semibold">Crear Reporte</h3>
+      <h3 className="font-semibold">{isUpdate ? "Actualizar datos del reporte" : "Datos del reporte"}</h3>
       <div className="grid md:grid-cols-3 gap-3">
         <input
           className="h-10 rounded-md border border-border bg-input px-3 text-sm"
@@ -520,7 +737,7 @@ function ReportMeta({ onCreate, creating }) {
 
       <div className="flex justify-end">
         <Button onClick={() => onCreate({ title, equipmentId, description })} disabled={creating}>
-          {creating ? "Creating..." : "Create Report"}
+          {creating ? (isUpdate ? "Actualizando..." : "Creando...") : (isUpdate ? "Actualizar Reporte" : "Crear Reporte")}
         </Button>
       </div>
     </div>

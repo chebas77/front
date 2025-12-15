@@ -3,7 +3,9 @@ import { useEffect, useState, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { jsPDF } from "jspdf";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Badge } from "../components/ui/badge";
+import { Filter } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -20,6 +22,7 @@ function normalizeReport(raw) {
     title: raw.title ?? null,
     description: raw.description ?? null,
     equipment_id: raw.equipment_id ?? raw.equipmentId ?? null,
+    project_id: raw.project_id ?? raw.projectId ?? null,
     dims: parseMaybeJSON(raw.dims) ?? {},
     indicators: parseMaybeJSON(raw.indicators) ?? {},
     results: parseMaybeJSON(raw.results) ?? {},
@@ -40,11 +43,15 @@ function fmtNum(v) {
 // ───────────────── component ─────────────────
 export default function Reports() {
   const [items, setItems] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  
+  const projectFilter = searchParams.get("project");
 
-  // Carga inicial
+  // Carga inicial de reportes
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -63,6 +70,89 @@ export default function Reports() {
     })();
     return () => { cancel = true; };
   }, []);
+
+  // Cargar proyectos para el selector
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/projects`, { credentials: "include" });
+        const json = await res.json();
+        if (!cancel && json.items) {
+          setProjects(json.items);
+        }
+      } catch (e) {
+        console.error("Error cargando proyectos:", e);
+      }
+    })();
+    return () => { cancel = true; };
+  }, []);
+
+  // Filtrar reportes por proyecto si está seleccionado
+  const filteredItems = projectFilter
+    ? items.filter(item => String(item.project_id) === projectFilter)
+    : items;
+
+  // Asignar reporte a proyecto
+  const handleAssignProject = async (reportId, projectId) => {
+    try {
+      const endpoint = projectId 
+        ? `${API}/api/reports/${reportId}/assign-project`
+        : `${API}/api/reports/${reportId}/unassign-project`;
+      
+      const res = await fetch(endpoint, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ projectId: projectId ? Number(projectId) : null }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || "Error al asignar proyecto");
+      }
+
+      // Actualizar estado local
+      setItems(prev => prev.map(item => 
+        item.id === reportId 
+          ? { ...item, project_id: projectId ? Number(projectId) : null }
+          : item
+      ));
+    } catch (error) {
+      console.error("Error asignando proyecto:", error);
+      alert(`No se pudo asignar el proyecto: ${error.message}`);
+    }
+  };
+
+  // Eliminar reporte
+  const handleDeleteReport = async (reportId, reportTitle) => {
+    if (!confirm(`¿Estás seguro de eliminar el reporte "${reportTitle || `#${reportId}`}"?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/api/reports/${reportId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || "Error al eliminar reporte");
+      }
+
+      // Actualizar estado local eliminando el reporte
+      setItems(prev => prev.filter(item => item.id !== reportId));
+    } catch (error) {
+      console.error("Error eliminando reporte:", error);
+      alert(`No se pudo eliminar el reporte: ${error.message}`);
+    }
+  };
+
+  // Editar reporte
+  const handleEditReport = (reportId) => {
+    navigate(`/app/calculations?edit=${reportId}`);
+  };
 
   // PDF rápido (cliente)
   const generatePdf = useCallback((r) => {
@@ -145,22 +235,65 @@ export default function Reports() {
     }
   }, []);
 
+  const currentProject = projectFilter 
+    ? projects.find(p => String(p.id) === projectFilter)
+    : null;
+
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Mis reportes</h1>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Mis reportes</h1>
+          {currentProject && (
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="secondary">{currentProject.name}</Badge>
+              <button 
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+                onClick={() => setSearchParams({})}
+              >
+                Ver todos los reportes
+              </button>
+            </div>
+          )}
+        </div>
         <span className="text-sm text-muted-foreground">
-          {loading ? "Cargando..." : `${items.length} reporte(s)`}
+          {loading ? "Cargando..." : `${filteredItems.length} reporte(s)`}
         </span>
       </div>
 
+      {!projectFilter && projects.length > 0 && (
+        <div className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg">
+          <Filter className="h-5 w-5 text-muted-foreground" />
+          <span className="text-sm font-medium">Filtrar por proyecto:</span>
+          <select 
+            className="flex-1 max-w-xs px-3 py-2 text-sm rounded-md border border-border bg-background"
+            value={projectFilter || ""}
+            onChange={(e) => {
+              if (e.target.value) {
+                setSearchParams({ project: e.target.value });
+              } else {
+                setSearchParams({});
+              }
+            }}
+          >
+            <option value="">Todos los proyectos</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {err && <div className="text-destructive text-sm">{err}</div>}
 
-      {!loading && items.length === 0 && (
+      {!loading && filteredItems.length === 0 && (
         <Card className="bg-card">
           <CardContent className="py-8">
             <p className="text-muted-foreground">
-              Aún no tienes reportes. Crea uno desde <span className="font-semibold">Cálculos</span>.
+              {projectFilter 
+                ? `No hay reportes en el proyecto "${currentProject?.name || 'seleccionado'}"` 
+                : "Aún no tienes reportes. Crea uno desde Cálculos."
+              }
             </p>
           </CardContent>
         </Card>
@@ -168,7 +301,7 @@ export default function Reports() {
 
       {/* grid de reportes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map((r) => (
+        {filteredItems.map((r) => (
           <Card key={r.id} className="bg-card">
             <CardHeader>
               <CardTitle className="truncate text-card-foreground">
@@ -180,11 +313,26 @@ export default function Reports() {
             </CardHeader>
 
             <CardContent className="space-y-2">
-              {r.description && (
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {r.description}
-                </p>
-              )}
+              <p className="text-sm text-muted-foreground line-clamp-3 italic">
+                {r.description || "Sin descripción"}
+              </p>
+
+              {/* Selector de proyecto */}
+              <div className="pt-2 border-t border-border">
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  Proyecto asignado:
+                </label>
+                <select
+                  className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background"
+                  value={r.project_id || ""}
+                  onChange={(e) => handleAssignProject(r.id, e.target.value || null)}
+                >
+                  <option value="">Sin asignar</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
 
               <div className="text-xs text-muted-foreground mt-4 space-y-1">
                 <div><b>Usuario:</b> {r.user_name || r.user_email || r.user_id || "N/A"}</div>
@@ -203,13 +351,35 @@ export default function Reports() {
               </div>
 
               <div className="flex gap-2 pt-2">
-                <Button onClick={() => generatePdf(r)}>PDF rápido</Button>
+                <Button 
+                  onClick={() => generatePdf(r)} 
+                  className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white"
+                >
+                   PDF
+                </Button>
                 <Button
-  variant="secondary"
-  onClick={() => navigate(`/app/reports/${r.id}/print`)}
->
-  Vista para imprimir
-</Button>
+                  onClick={() => navigate(`/app/reports/${r.id}/print`)}
+                  className="flex-1 bg-pink-600 hover:bg-pink-700 text-white"
+                >
+                   Imprimir
+                </Button>
+              </div>
+
+              <div className="flex gap-2 mt-2">
+                <Button 
+                  variant="outline"
+                  onClick={() => handleEditReport(r.id)}
+                  className="flex-1 border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 dark:text-blue-400"
+                >
+                   Editar
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => handleDeleteReport(r.id, r.title)}
+                  className="flex-1 border-red-500 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 dark:text-red-400"
+                >
+                   Eliminar
+                </Button>
               </div>
             </CardContent>
           </Card>

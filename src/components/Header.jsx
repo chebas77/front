@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Bell, Loader2, Search, User } from "lucide-react";
+import { Bell, Loader2, Search, User, X, Check } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
@@ -46,7 +46,14 @@ export function Header() {
   const [results, setResults] = useState({ projects: [], reports: [] });
   const [open, setOpen] = useState(false);
 
+  // Estados de notificaciones
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+
   const searchRef = useRef(null);
+  const notifRef = useRef(null);
   const abortRef = useRef(null);
 
   // Cierra el popup al click fuera
@@ -54,6 +61,9 @@ export function Header() {
     function handleClickOutside(event) {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setNotifOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -63,10 +73,84 @@ export function Header() {
   // Reset al cambiar de ruta
   useEffect(() => {
     setOpen(false);
+    setNotifOpen(false);
     setTerm("");
     setResults({ projects: [], reports: [] });
     setError("");
   }, [location.pathname]);
+
+  // Cargar notificaciones
+  useEffect(() => {
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 30000); // Actualizar cada 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  async function loadNotifications() {
+    try {
+      const res = await fetch(`${API}/api/notifications?limit=20`, { credentials: "include" });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json.ok) {
+        setNotifications(json.notifications || []);
+        setUnreadCount(json.unreadCount || 0);
+      }
+    } catch (e) {
+      console.error("Error cargando notificaciones:", e);
+    }
+  }
+
+  async function markAsRead(id) {
+    try {
+      const res = await fetch(`${API}/api/notifications/${id}/read`, {
+        method: "PUT",
+        credentials: "include"
+      });
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (e) {
+      console.error("Error marcando notificación:", e);
+    }
+  }
+
+  async function markAllAsRead() {
+    try {
+      setNotifLoading(true);
+      const res = await fetch(`${API}/api/notifications/read-all`, {
+        method: "PUT",
+        credentials: "include"
+      });
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+        setUnreadCount(0);
+      }
+    } catch (e) {
+      console.error("Error marcando todas:", e);
+    } finally {
+      setNotifLoading(false);
+    }
+  }
+
+  async function deleteNotification(id) {
+    try {
+      const res = await fetch(`${API}/api/notifications/${id}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+      if (res.ok) {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+        const notif = notifications.find(n => n.id === id);
+        if (notif && !notif.is_read) {
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+      }
+    } catch (e) {
+      console.error("Error eliminando notificación:", e);
+    }
+  }
+
 
   useEffect(() => {
     const trimmed = term.trim();
@@ -291,9 +375,114 @@ export function Header() {
             )}
           </div>
 
-          <Button variant="ghost" size="sm"><Bell className="h-5 w-5" /></Button>
+          {/* Botón de notificaciones */}
+          <div className="relative" ref={notifRef}>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="relative"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Button>
+
+            {notifOpen && (
+              <div className="absolute right-0 z-50 mt-2 w-96 max-w-[90vw] rounded-lg border border-border bg-card shadow-xl">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                  <h3 className="font-semibold text-card-foreground">Notificaciones</h3>
+                  {notifications.length > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={markAllAsRead}
+                      disabled={notifLoading || unreadCount === 0}
+                      className="text-xs"
+                    >
+                      {notifLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Marcar todas"}
+                    </Button>
+                  )}
+                </div>
+
+                <div className="max-h-96 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                      No hay notificaciones
+                    </div>
+                  ) : (
+                    <ul>
+                      {notifications.map((notif) => (
+                        <li 
+                          key={notif.id}
+                          className={`px-4 py-3 border-b border-border last:border-0 transition-colors ${
+                            !notif.is_read ? 'bg-blue-50 dark:bg-blue-950/20' : 'hover:bg-muted'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className={`inline-block w-2 h-2 rounded-full ${
+                                  notif.type === 'success' ? 'bg-green-500' :
+                                  notif.type === 'info' ? 'bg-blue-500' :
+                                  notif.type === 'warning' ? 'bg-orange-500' :
+                                  'bg-gray-500'
+                                }`} />
+                                <p className="font-medium text-sm text-card-foreground truncate">
+                                  {notif.title}
+                                </p>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                {notif.message}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(notif.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {!notif.is_read && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => markAsRead(notif.id)}
+                                  className="h-7 w-7 p-0"
+                                  title="Marcar como leída"
+                                >
+                                  <Check className="h-3 w-3" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteNotification(notif.id)}
+                                className="h-7 w-7 p-0 text-destructive"
+                                title="Eliminar"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <ThemeToggle />
-          <Button variant="ghost" size="sm"><User className="h-5 w-5" /></Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => navigate("/app/profile")}
+            title="Mi Perfil"
+          >
+            <User className="h-5 w-5" />
+          </Button>
         </div>
       </div>
     </header>

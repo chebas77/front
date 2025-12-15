@@ -11,6 +11,7 @@ import RimFaceWizard from "./pages/RimFaceWizard";
 import Reports from "./pages/Reports";
 import ReportPrint from "./pages/ReportPrint.jsx";
 import Projects from "./pages/Projects";
+import Profile from "./pages/Profile";
 
 // Componentes de layout
 import { Sidebar } from "./components/Sidebar";
@@ -45,6 +46,9 @@ function AppShell() {
             {/* Reportes */}
             <Route path="reports" element={<Reports />} />
             <Route path="reports/:id/print" element={<ReportPrint />} />
+
+            {/* Perfil */}
+            <Route path="profile" element={<Profile />} />
 
             {/* Fallback: redirigir a dashboard */}
             <Route path="*" element={<Navigate to="." replace />} />

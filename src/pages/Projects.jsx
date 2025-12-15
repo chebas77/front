@@ -5,7 +5,7 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Dialog } from "../components/ui/dialog";
-import { Clock, FolderOpen, Loader2, Plus } from "lucide-react";
+import { Clock, FolderOpen, Loader2, Plus, MoreVertical, CheckCircle, Circle, Clock4 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -57,6 +57,7 @@ export default function Projects() {
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
+  const [statusMenuOpen, setStatusMenuOpen] = useState(null); // ID del proyecto con menu abierto
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -111,11 +112,38 @@ export default function Projects() {
 
   function handleOpenProject(projectId) {
     if (projectId == null) return;
-    navigate(`/app/calculations?project=${encodeURIComponent(projectId)}`);
+    navigate(`/app/reports?project=${encodeURIComponent(projectId)}`);
   }
 
   function handleReload() {
     setRefreshTick((tick) => tick + 1);
+  }
+
+  async function handleChangeStatus(projectId, newStatus) {
+    try {
+      const res = await fetch(`${API}/projects/${projectId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Error ${res.status}`);
+      }
+
+      // Actualizar el estado local
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === projectId ? { ...p, status: newStatus } : p
+        )
+      );
+      setStatusMenuOpen(null);
+    } catch (error) {
+      console.error("Error al cambiar estado:", error);
+      alert(`No se pudo actualizar el estado: ${error.message}`);
+    }
   }
 
   async function handleCreateProject(event) {
@@ -249,6 +277,7 @@ export default function Projects() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filteredProjects.map((project) => {
             const badge = statusBadge(project.status);
+            const isMenuOpen = statusMenuOpen === project.id;
             return (
               <Card key={project.id ?? project.name} className="bg-card border-border">
                 <CardHeader className="space-y-1">
@@ -261,9 +290,57 @@ export default function Projects() {
                         <p className="text-xs text-muted-foreground mt-1">Responsable: {project.owner}</p>
                       )}
                     </div>
-                    <Badge variant={badge.variant} className={badge.className}>
-                      {badge.label}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={badge.variant} className={badge.className}>
+                        {badge.label}
+                      </Badge>
+                      <div className="relative">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          onClick={() => setStatusMenuOpen(isMenuOpen ? null : project.id)}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                        {isMenuOpen && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-10"
+                              onClick={() => setStatusMenuOpen(null)}
+                            />
+                            <div className="absolute right-0 top-10 z-20 w-48 rounded-md border border-border bg-popover shadow-lg">
+                              <div className="p-2 space-y-1">
+                                <p className="text-xs font-semibold text-muted-foreground px-2 py-1">
+                                  Cambiar estado
+                                </p>
+                                <button
+                                  className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-accent flex items-center gap-2"
+                                  onClick={() => handleChangeStatus(project.id, "PENDIENTE")}
+                                >
+                                  <Circle className="h-4 w-4" />
+                                  Pendiente
+                                </button>
+                                <button
+                                  className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-accent flex items-center gap-2"
+                                  onClick={() => handleChangeStatus(project.id, "EN_PROGRESO")}
+                                >
+                                  <Clock4 className="h-4 w-4" />
+                                  En progreso
+                                </button>
+                                <button
+                                  className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-accent flex items-center gap-2"
+                                  onClick={() => handleChangeStatus(project.id, "COMPLETADO")}
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                  Completado
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground">Actualizado {formatDate(project.updatedAt)}</p>
                 </CardHeader>
