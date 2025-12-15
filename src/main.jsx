@@ -4,13 +4,16 @@ import App from "./App.jsx"
 import "./index.css"
 import { ThemeProvider } from "./components/theme-provider"
 import { AuthProvider } from "./components/auth-provider"
+import { BrowserRouter } from "react-router-dom"
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ThemeProvider defaultTheme="light">
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </BrowserRouter>
     </ThemeProvider>
   </React.StrictMode>
 )

@@ -12,7 +12,19 @@ export function AuthProvider({ children }) {
 
   const fetchMe = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/me`, { credentials: "include" });
+      // Intentar obtener token de localStorage
+      const token = localStorage.getItem('token');
+      const headers = { 'Content-Type': 'application/json' };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const res = await fetch(`${API}/api/me`, { 
+        credentials: "include",
+        headers 
+      });
+      
       if (!res.ok) {
         setUser(null);
         setLoading(false);
@@ -34,8 +46,8 @@ export function AuthProvider({ children }) {
     const token = params.get('token');
     
     if (token) {
-      // Guardar el token en una cookie manualmente
-      document.cookie = `token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=None; Secure`;
+      // Guardar el token en localStorage (más confiable para cross-domain)
+      localStorage.setItem('token', token);
       
       // Limpiar la URL
       params.delete('token');

@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 // Páginas
 import Landing from "./pages/Landing";
@@ -61,30 +61,28 @@ function AppShell() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Página pública principal */}
-        <Route path="/" element={<Landing />} />
+    <Routes>
+      {/* Página pública principal */}
+      <Route path="/" element={<Landing />} />
 
-        {/* Demo pública de calculadora */}
-        <Route path="/demo/calculations" element={<CalculationsDemo />} />
+      {/* Demo pública de calculadora */}
+      <Route path="/demo/calculations" element={<CalculationsDemo />} />
 
-        {/* Página pública de características */}
-        <Route path="/caracteristicas" element={<CaracteristicasPublic />} />
+      {/* Página pública de características */}
+      <Route path="/caracteristicas" element={<CaracteristicasPublic />} />
 
-        {/* Área protegida (requiere login) */}
-        <Route
-          path="/app/*"
-          element={
-            <ProtectedRoute>
-              <AppShell />
-            </ProtectedRoute>
-          }
-        />
+      {/* Área protegida (requiere login) */}
+      <Route
+        path="/app/*"
+        element={
+          <ProtectedRoute>
+            <AppShell />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* Fallback: redirigir al landing */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+      {/* Fallback: redirigir al landing */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
