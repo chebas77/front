@@ -24,9 +24,12 @@ export default function Profile() {
 
   async function fetchUserStats() {
     try {
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const [reportsRes, projectsRes] = await Promise.all([
-        fetch(`${API}/api/reports`, { credentials: "include" }),
-        fetch(`${API}/projects?pageSize=100`, { credentials: "include" })
+        fetch(`${API}/api/reports`, { credentials: "include", headers }),
+        fetch(`${API}/projects?pageSize=100`, { credentials: "include", headers })
       ]);
 
       const reportsData = await reportsRes.json();
@@ -47,9 +50,12 @@ export default function Profile() {
   async function handleSave() {
     setSaving(true);
     try {
+      const token = localStorage.getItem('token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`${API}/api/me/update`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ name: formData.name })
       });

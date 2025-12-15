@@ -67,7 +67,13 @@ export default function Projects() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`${API}/projects`, { credentials: "include" });
+        const token = localStorage.getItem('token');
+        const headers = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch(`${API}/projects`, { 
+          credentials: "include",
+          headers 
+        });
         if (!res.ok) {
           throw new Error(`Error ${res.status} al cargar proyectos`);
         }
@@ -121,9 +127,12 @@ export default function Projects() {
 
   async function handleChangeStatus(projectId, newStatus) {
     try {
+      const token = localStorage.getItem('token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`${API}/projects/${projectId}/status`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ status: newStatus }),
       });
@@ -161,9 +170,12 @@ export default function Projects() {
     setCreateError("");
 
     try {
+      const token = localStorage.getItem('token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`${API}/projects`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({
           name,

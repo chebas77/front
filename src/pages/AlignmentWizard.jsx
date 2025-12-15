@@ -27,9 +27,12 @@ export default function AlignmentWizard() {
   async function createSession() {
     setError(""); setLoading(true);
     try {
+      const token = localStorage.getItem('token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const r = await fetch(`${API}/api/alignment/session`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({
           method: form.method,
@@ -49,9 +52,12 @@ export default function AlignmentWizard() {
   async function saveDimensionsNext() {
     setError(""); setLoading(true);
     try {
+      const token = localStorage.getItem('token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const r = await fetch(`${API}/api/alignment/session/${sessionId}/dimensions`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({
           H: Number(form.H), D: Number(form.D), E: Number(form.E),
@@ -70,9 +76,12 @@ export default function AlignmentWizard() {
   async function saveReadingsNext() {
     setError(""); setLoading(true);
     try {
+      const token = localStorage.getItem('token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const r = await fetch(`${API}/api/alignment/session/${sessionId}/readings`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({
           R90: Number(form.R90), R180: Number(form.R180), R270: Number(form.R270),

@@ -58,7 +58,13 @@ export default function Reports() {
       setLoading(true);
       setErr("");
       try {
-        const res = await fetch(`${API}/api/reports`, { credentials: "include" });
+        const token = localStorage.getItem('token');
+        const headers = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch(`${API}/api/reports`, { 
+          credentials: "include",
+          headers 
+        });
         const json = await res.json();
         if (!res.ok || !json.ok) throw new Error(json.error || "Error al cargar reportes");
         if (!cancel) setItems((json.items || []).map(normalizeReport));
@@ -76,7 +82,13 @@ export default function Reports() {
     let cancel = false;
     (async () => {
       try {
-        const res = await fetch(`${API}/projects`, { credentials: "include" });
+        const token = localStorage.getItem('token');
+        const headers = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch(`${API}/projects`, { 
+          credentials: "include",
+          headers 
+        });
         const json = await res.json();
         if (!cancel && json.items) {
           setProjects(json.items);
@@ -100,9 +112,12 @@ export default function Reports() {
         ? `${API}/api/reports/${reportId}/assign-project`
         : `${API}/api/reports/${reportId}/unassign-project`;
       
+      const token = localStorage.getItem('token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(endpoint, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ projectId: projectId ? Number(projectId) : null }),
       });
@@ -131,9 +146,13 @@ export default function Reports() {
     }
 
     try {
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`${API}/api/reports/${reportId}`, {
         method: "DELETE",
         credentials: "include",
+        headers,
       });
 
       if (!res.ok) {

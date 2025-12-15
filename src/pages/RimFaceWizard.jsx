@@ -29,8 +29,11 @@ export default function RimFaceWizard() {
   async function newSession() {
     setLoading(true); setError("");
     try {
+      const token = localStorage.getItem('token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const r = await fetch(`${API}/api/rim-face/session`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers,
         credentials: "include", body: JSON.stringify(project)
       });
       const data = await r.json();
@@ -43,8 +46,11 @@ export default function RimFaceWizard() {
   async function savePhysical() {
     setLoading(true); setError("");
     try {
+      const token = localStorage.getItem('token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const r = await fetch(`${API}/api/rim-face/session/${sessionId}/physical`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
+        method: "PUT", headers,
         credentials: "include",
         body: JSON.stringify({
           ...Object.fromEntries(Object.entries(physical).map(([k,v])=>[k, v===""? null:Number(v)])),
@@ -61,8 +67,11 @@ export default function RimFaceWizard() {
     setLoading(true); setError("");
     try {
       const body = Object.fromEntries(Object.entries(indicators).map(([k,v]) => [k, Number(v)]));
+      const token = localStorage.getItem('token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const r = await fetch(`${API}/api/rim-face/session/${sessionId}/indicators`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
+        method: "PUT", headers,
         credentials: "include", body: JSON.stringify(body)
       });
       const data = await r.json();
@@ -75,8 +84,11 @@ export default function RimFaceWizard() {
   async function calculate() {
     setLoading(true); setError("");
     try {
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const r = await fetch(`${API}/api/rim-face/session/${sessionId}/calculate`, {
-        method: "POST", credentials: "include"
+        method: "POST", credentials: "include", headers
       });
       const data = await r.json();
       if (!r.ok || !data.ok) throw new Error(data.error || "Calc error");

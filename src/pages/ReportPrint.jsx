@@ -85,9 +85,12 @@ export default function ReportPrint() {
   useEffect(() => {
     (async () => {
       try {
+        const token = localStorage.getItem('token');
+        const headers = { Accept: "application/json" };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
         const res = await fetch(`${API}/api/reports/${id}`, {
           credentials: "include",
-          headers: { Accept: "application/json" },
+          headers,
         });
         const json = await res.json();
         if (!res.ok || !json.ok) throw new Error(json.error || "Error al cargar el reporte");

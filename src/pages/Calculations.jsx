@@ -60,9 +60,12 @@ export default function Calculations({ demo = false }) {
     let cancel = false;
     (async () => {
       try {
+        const token = localStorage.getItem('token');
+        const headers = { Accept: "application/json" };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
         const res = await fetch(`${API}/api/reports/${editId}`, {
           credentials: "include",
-          headers: { Accept: "application/json" },
+          headers,
         });
         const json = await res.json();
         if (!res.ok || !json.ok) throw new Error(json.error || "Error al cargar el reporte");
@@ -172,9 +175,12 @@ export default function Calculations({ demo = false }) {
       console.table(body);
       console.groupEnd();
 
+      const token = localStorage.getItem('token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const resp = await fetch(`${API}/api/alignment/compute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify(body),
       });
@@ -256,9 +262,12 @@ export default function Calculations({ demo = false }) {
       const url = isUpdate ? `${API}/api/reports/${savedReportId}` : `${API}/api/reports`;
       const method = isUpdate ? "PUT" : "POST";
       
+      const token = localStorage.getItem('token');
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const r = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify(payload),
       });

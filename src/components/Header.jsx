@@ -10,7 +10,10 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 async function fetchJsonSafe(url, signal) {
   try {
-    const res = await fetch(url, { credentials: "include", signal });
+    const token = localStorage.getItem('token');
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, { credentials: "include", signal, headers });
     const ct = res.headers.get("content-type") || "";
     const isJson = ct.includes("application/json");
     const body = isJson ? await res.json().catch(() => null) : null;
@@ -88,7 +91,13 @@ export function Header() {
 
   async function loadNotifications() {
     try {
-      const res = await fetch(`${API}/api/notifications?limit=20`, { credentials: "include" });
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${API}/api/notifications?limit=20`, { 
+        credentials: "include",
+        headers 
+      });
       if (!res.ok) return;
       const json = await res.json();
       if (json.ok) {
@@ -102,9 +111,13 @@ export function Header() {
 
   async function markAsRead(id) {
     try {
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`${API}/api/notifications/${id}/read`, {
         method: "PUT",
-        credentials: "include"
+        credentials: "include",
+        headers
       });
       if (res.ok) {
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
@@ -118,9 +131,13 @@ export function Header() {
   async function markAllAsRead() {
     try {
       setNotifLoading(true);
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`${API}/api/notifications/read-all`, {
         method: "PUT",
-        credentials: "include"
+        credentials: "include",
+        headers
       });
       if (res.ok) {
         setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
@@ -135,9 +152,13 @@ export function Header() {
 
   async function deleteNotification(id) {
     try {
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`${API}/api/notifications/${id}`, {
         method: "DELETE",
-        credentials: "include"
+        credentials: "include",
+        headers
       });
       if (res.ok) {
         setNotifications(prev => prev.filter(n => n.id !== id));
