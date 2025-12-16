@@ -23,7 +23,7 @@ export function Dialog({ open, onClose, title, children, footer }) {
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
       aria-hidden="true"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose?.(); // click fuera
@@ -35,12 +35,12 @@ export function Dialog({ open, onClose, title, children, footer }) {
         aria-label={title}
         tabIndex={-1}
         ref={panelRef}
-        className="mx-auto mt-24 w-[min(720px,92vw)] outline-none"
+        className="w-full max-w-[720px] max-h-[90vh] overflow-y-auto outline-none"
       >
         <div className="rounded-xl border border-border bg-card shadow-2xl">
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-            <h2 className="text-base font-semibold">{title}</h2>
+          <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-border">
+            <h2 className="text-base sm:text-lg font-semibold">{title}</h2>
             <button
               onClick={onClose}
               className="rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted"
@@ -51,13 +51,13 @@ export function Dialog({ open, onClose, title, children, footer }) {
           </div>
 
           {/* Body */}
-          <div className="px-5 py-4 space-y-4 text-sm text-muted-foreground">
+          <div className="px-4 sm:px-5 py-3 sm:py-4 space-y-4 text-sm text-muted-foreground">
             {children}
           </div>
 
           {/* Footer (opcional) */}
           {footer && (
-            <div className="px-5 py-3 border-t border-border bg-muted/30">
+            <div className="px-4 sm:px-5 py-3 border-t border-border bg-muted/30">
               {footer}
             </div>
           )}

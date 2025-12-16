@@ -21,11 +21,11 @@ import ProtectedRoute from "./components/protected-route";
 
 function AppShell() {
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background overflow-hidden">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden w-full min-w-0">
         <Header />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-5">
           <Routes>
             {/* Dashboard principal */}
             <Route index element={<Dashboard />} />

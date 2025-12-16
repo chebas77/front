@@ -304,10 +304,10 @@ export default function Calculations({ demo = false }) {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-4 sm:space-y-6 max-w-6xl mx-auto">
       {/* Aviso DEMO */}
       {isDemo && (
-  <div className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 p-3 text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  <div className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 p-3 text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
     <p>
       <strong>Modo demo:</strong> puedes realizar el cálculo completo, pero
       <strong> no se guardarán</strong> datos ni podrás <strong>exportar a PDF</strong>.
@@ -326,8 +326,8 @@ export default function Calculations({ demo = false }) {
               Rim & Face — Step 1 of 3: Physical Data Input
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
+          <CardContent className="space-y-4 sm:space-y-6">
+            <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-4">
                 <Field label="Swing Diameter, (H)">
                   <input
@@ -411,8 +411,8 @@ export default function Calculations({ demo = false }) {
           <CardHeader>
             <CardTitle className="text-card-foreground">Step 2 of 3: Dial Gage Data Input</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
+          <CardContent className="space-y-4 sm:space-y-6">
+            <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-4">
                 <h3 className="font-semibold">Rim</h3>
                 {["R90", "R180", "R270"].map((k) => (
@@ -489,7 +489,7 @@ export default function Calculations({ demo = false }) {
               </div>
 
               {/* Sección de datos de entrada */}
-              <div className="grid md:grid-cols-2 gap-6 mb-6">
+              <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
                 <div className="space-y-3">
                   <h3 className="font-semibold text-lg border-b border-border pb-2">
                     Equipment Measurements (inches)

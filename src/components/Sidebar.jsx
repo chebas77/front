@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Calculator,
@@ -28,6 +28,7 @@ const RAW_ITEMS = [
 
 export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading, refresh } = useAuth();
@@ -41,6 +42,13 @@ export function Sidebar() {
   const initial = (displayName?.[0] || "U").toUpperCase();
   const containerWidth = isCollapsed ? "w-16" : "w-64";
 
+  // Escuchar evento del botón hamburger en el header
+  useEffect(() => {
+    const handleToggle = () => setIsMobileOpen(prev => !prev);
+    window.addEventListener('toggle-sidebar', handleToggle);
+    return () => window.removeEventListener('toggle-sidebar', handleToggle);
+  }, []);
+
   async function handleLogout() {
     try {
       await fetch(`${API}/auth/logout`, { method: "POST", credentials: "include" });
@@ -52,7 +60,18 @@ export function Sidebar() {
   }
 
   return (
-    <Card className={`${containerWidth} transition-all duration-300 rounded-none border-r bg-sidebar border-sidebar-border`}>
+    <>
+      {/* Overlay para móvil */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+      
+      {/* Sidebar - Oculto completamente en móviles, visible en lg+ */}
+      <aside className={`hidden lg:block lg:relative fixed inset-y-0 left-0 z-50 transform ${isMobileOpen ? 'translate-x-0 !block' : '-translate-x-full'} transition-transform duration-300`}>
+        <Card className={`${containerWidth} transition-all duration-300 h-full rounded-none border-r bg-sidebar border-sidebar-border`}>
       <div className="flex h-full flex-col">
         <div className="border-b border-sidebar-border p-4">
           <div className="flex items-center justify-between">
@@ -128,5 +147,7 @@ export function Sidebar() {
         )}
       </div>
     </Card>
+      </aside>
+    </>
   );
 }

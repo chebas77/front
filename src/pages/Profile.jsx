@@ -89,13 +89,13 @@ export default function Profile() {
   }) : "Reciente";
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Mi Perfil</h1>
-        <p className="text-muted-foreground">Gestiona tu información y revisa tu actividad</p>
+    <div className="container mx-auto p-3 sm:p-6 max-w-7xl">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">Mi Perfil</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Gestiona tu información y revisa tu actividad</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Información del Usuario */}
         <div className="lg:col-span-1">
           <Card className="p-6">

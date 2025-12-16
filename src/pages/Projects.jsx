@@ -212,19 +212,19 @@ export default function Projects() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-            <FolderOpen className="h-7 w-7" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
+            <FolderOpen className="h-6 w-6 sm:h-7 sm:w-7" />
             Mis proyectos
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Consulta el estado de tus proyectos de alineación y accede rápidamente a sus cálculos.
           </p>
         </div>
         <Button
-          className="self-start bg-primary text-primary-foreground hover:opacity-90"
+          className="bg-primary text-primary-foreground hover:opacity-90 w-full sm:w-auto"
           onClick={() => {
             setCreateOpen(true);
             setCreateError("");
@@ -235,19 +235,20 @@ export default function Projects() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+      <div className="flex flex-col gap-3 sm:gap-4">
         <Input
           placeholder="Buscar por nombre, responsable o descripción"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="md:col-span-1"
+          className="w-full"
         />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
           {["TODOS", "EN_PROGRESO", "COMPLETADO", "PENDIENTE"].map((option) => (
             <Button
               key={option}
               variant={statusFilter === option ? "default" : "outline"}
               onClick={() => setStatusFilter(option)}
+              className="whitespace-nowrap text-xs sm:text-sm"
             >
               {option === "TODOS"
                 ? "Todos"

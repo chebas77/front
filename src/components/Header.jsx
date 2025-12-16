@@ -297,18 +297,33 @@ export function Header() {
   }
 
   return (
-    <header className="bg-card border-b border-border px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <h2 className="text-2xl font-bold text-foreground">Alineación de Motores Industriales</h2>
+    <header className="bg-card border-b border-border px-3 sm:px-4 md:px-6 py-2.5 sm:py-3">
+      <div className="flex items-center justify-between gap-2">
+        {/* Botón hamburger para abrir sidebar */}
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('toggle-sidebar'))}
+          className="lg:hidden h-8 w-8 flex items-center justify-center rounded-md hover:bg-accent transition-colors flex-shrink-0"
+          aria-label="Toggle menu"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        {/* Título */}
+        <div className="flex items-center flex-1 min-w-0">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground truncate">
+            <span className="hidden md:inline">Alineación de Motores Industriales</span>
+            <span className="md:hidden">Alignment Pro</span>
+          </h2>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <div className="relative" ref={searchRef}>
+        <div className="flex items-center gap-1 sm:gap-1.5">
+          <div className="relative hidden sm:block" ref={searchRef}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Buscar proyectos o reportes"
-              className="pl-10 w-72"
+              className="pl-10 w-40 md:w-64 lg:w-72"
               value={term}
               onChange={(e) => { setTerm(e.target.value); setOpen(true); }}
               onFocus={() => { if (term.trim().length >= 2) setOpen(true); }}
@@ -402,74 +417,80 @@ export function Header() {
               variant="ghost" 
               size="sm"
               onClick={() => setNotifOpen(!notifOpen)}
-              className="relative"
+              className="relative flex-shrink-0"
             >
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-4.5 w-4.5 flex items-center justify-center font-bold">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
             </Button>
 
             {notifOpen && (
-              <div className="absolute right-0 z-50 mt-2 w-96 max-w-[90vw] rounded-lg border border-border bg-card shadow-xl">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                  <h3 className="font-semibold text-card-foreground">Notificaciones</h3>
+              <div className="absolute right-0 z-50 mt-2 w-72 sm:w-80 md:w-96 max-w-[calc(100vw-1rem)] rounded-lg border border-border bg-card shadow-xl">
+                <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
+                  <h3 className="font-semibold text-sm text-card-foreground">Notificaciones</h3>
                   {notifications.length > 0 && (
                     <Button 
                       variant="ghost" 
                       size="sm"
                       onClick={markAllAsRead}
                       disabled={notifLoading || unreadCount === 0}
-                      className="text-xs"
+                      className="text-xs h-7 px-2"
                     >
                       {notifLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Marcar todas"}
                     </Button>
                   )}
                 </div>
 
-                <div className="max-h-96 overflow-y-auto">
+                <div className="max-h-[60vh] sm:max-h-96 overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                      No hay notificaciones
+                    <div className="px-4 py-6 sm:py-8 text-center">
+                      <Bell className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                      <p className="text-xs sm:text-sm text-muted-foreground">No hay notificaciones</p>
                     </div>
                   ) : (
                     <ul>
                       {notifications.map((notif) => (
                         <li 
                           key={notif.id}
-                          className={`px-4 py-3 border-b border-border last:border-0 transition-colors ${
+                          className={`px-3 sm:px-4 py-2.5 border-b border-border last:border-0 transition-colors ${
                             !notif.is_read ? 'bg-blue-50 dark:bg-blue-950/20' : 'hover:bg-muted'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className={`inline-block w-2 h-2 rounded-full ${
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                                   notif.type === 'success' ? 'bg-green-500' :
                                   notif.type === 'info' ? 'bg-blue-500' :
                                   notif.type === 'warning' ? 'bg-orange-500' :
                                   'bg-gray-500'
                                 }`} />
-                                <p className="font-medium text-sm text-card-foreground truncate">
+                                <p className="font-medium text-xs sm:text-sm text-card-foreground truncate">
                                   {notif.title}
                                 </p>
                               </div>
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              <p className="text-[11px] sm:text-xs text-muted-foreground line-clamp-2 mb-1">
                                 {notif.message}
                               </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {new Date(notif.created_at).toLocaleString()}
+                              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                                {new Date(notif.created_at).toLocaleString('es-MX', { 
+                                  month: 'short', 
+                                  day: 'numeric', 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
                               </p>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-0.5 flex-shrink-0">
                               {!notif.is_read && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => markAsRead(notif.id)}
-                                  className="h-7 w-7 p-0"
+                                  className="h-6 w-6 p-0 hover:bg-accent"
                                   title="Marcar como leída"
                                 >
                                   <Check className="h-3 w-3" />
@@ -479,7 +500,7 @@ export function Header() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => deleteNotification(notif.id)}
-                                className="h-7 w-7 p-0 text-destructive"
+                                className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
                                 title="Eliminar"
                               >
                                 <X className="h-3 w-3" />
@@ -501,6 +522,7 @@ export function Header() {
             size="sm"
             onClick={() => navigate("/app/profile")}
             title="Mi Perfil"
+            className="flex-shrink-0"
           >
             <User className="h-5 w-5" />
           </Button>

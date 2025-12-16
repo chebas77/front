@@ -259,10 +259,10 @@ export default function Reports() {
     : null;
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Mis reportes</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Mis reportes</h1>
           {currentProject && (
             <div className="flex items-center gap-2 mt-2">
               <Badge variant="secondary">{currentProject.name}</Badge>
@@ -281,11 +281,13 @@ export default function Reports() {
       </div>
 
       {!projectFilter && projects.length > 0 && (
-        <div className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg">
-          <Filter className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm font-medium">Filtrar por proyecto:</span>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4 bg-card border border-border rounded-lg">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+            <span className="text-xs sm:text-sm font-medium">Filtrar por proyecto:</span>
+          </div>
           <select 
-            className="flex-1 max-w-xs px-3 py-2 text-sm rounded-md border border-border bg-background"
+            className="flex-1 px-3 py-2 text-xs sm:text-sm rounded-md border border-border bg-background"
             value={projectFilter || ""}
             onChange={(e) => {
               if (e.target.value) {
@@ -319,7 +321,7 @@ export default function Reports() {
       )}
 
       {/* grid de reportes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map((r) => (
           <Card key={r.id} className="bg-card">
             <CardHeader>

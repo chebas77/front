@@ -187,14 +187,14 @@ export function Dashboard() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Bienvenido al Dashboard</h1>
-          <p className="text-muted-foreground mt-2">Gestiona tus proyectos de alineación de motores industriales</p>
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">Bienvenido al Dashboard</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Gestiona tus proyectos de alineación de motores industriales</p>
         </div>
         <Button
-          className="bg-primary text-primary-foreground hover:opacity-90"
+          className="bg-primary text-primary-foreground hover:opacity-90 w-full sm:w-auto h-10 text-sm"
           onClick={() => {
             setCreateOpen(true);
             setCreateError("");
@@ -205,7 +205,7 @@ export function Dashboard() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {loading
           ? Array.from({ length: 3 }).map((_, i) => (
               <Card key={i} className="bg-card">
@@ -216,12 +216,12 @@ export function Dashboard() {
           : cards.map((c) => (
               <Card key={c.title} className="bg-card">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-card-foreground">{c.title}</CardTitle>
+                  <CardTitle className="text-xs sm:text-sm font-medium text-card-foreground">{c.title}</CardTitle>
                   <c.icon className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-card-foreground">{c.value}</div>
-                  <p className="text-xs text-muted-foreground">{c.description}</p>
+                  <div className="text-xl sm:text-2xl font-bold text-card-foreground">{c.value}</div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{c.description}</p>
                   {typeof c.trend === "number" && (
                     <p className={`text-xs mt-1 ${c.trend >= 0 ? "text-primary" : "text-destructive"}`}>
                       {c.trend >= 0 ? "+" : ""}{c.trend}
@@ -239,16 +239,16 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Proyectos recientes */}
         <Card className="bg-card">
           <CardHeader>
-            <CardTitle className="text-card-foreground">Proyectos Recientes</CardTitle>
-            <CardDescription>Últimos proyectos de alineación trabajados</CardDescription>
+            <CardTitle className="text-card-foreground text-base sm:text-lg">Proyectos Recientes</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Últimos proyectos de alineación trabajados</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="p-3 border border-border rounded-lg"></div>
                 ))}
@@ -256,22 +256,22 @@ export function Dashboard() {
             ) : recentProjects.length === 0 ? (
               <div className="text-sm text-muted-foreground">No hay proyectos recientes.</div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {recentProjects.map((project) => {
                   const badge = statusBadge(project.status);
                   return (
-                    <div key={project.id ?? project.name} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                      <div className="flex-1">
+                    <div key={project.id ?? project.name} className="flex items-center justify-between p-2.5 sm:p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors">
+                      <div className="flex-1 min-w-0">
                         <button
                           onClick={() => go(`/app/calculations?project=${encodeURIComponent(project.id ?? "")}`)}
-                          className="font-medium text-card-foreground hover:underline text-left"
+                          className="font-medium text-sm text-card-foreground hover:underline text-left truncate block w-full"
                         >
                           {project.name}
                         </button>
-                        <p className="text-sm text-muted-foreground">Actualizado hace {formatWhen(project.updatedAt)}</p>
+                        <p className="text-xs text-muted-foreground">Actualizado hace {formatWhen(project.updatedAt)}</p>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={badge.variant} className={badge.className}>
+                      <div className="flex items-center space-x-2 ml-2 flex-shrink-0">
+                        <Badge variant={badge.variant} className={`${badge.className} text-xs`}>
                           {project.status === "EN_PROGRESO" ? "En Progreso" : project.status === "COMPLETADO" ? "Completado" : "Pendiente"}
                         </Badge>
                       </div>
@@ -286,42 +286,42 @@ export function Dashboard() {
         {/* Acciones rápidas */}
         <Card className="bg-card">
           <CardHeader>
-            <CardTitle className="text-card-foreground">Acciones Rápidas</CardTitle>
-            <CardDescription>Herramientas más utilizadas</CardDescription>
+            <CardTitle className="text-card-foreground text-base sm:text-lg">Acciones Rápidas</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Herramientas más utilizadas</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="outline"
-                className="h-20 flex flex-col items-center justify-center space-y-2 bg-transparent"
+                className="h-16 sm:h-20 flex flex-col items-center justify-center gap-1.5 bg-transparent text-xs sm:text-sm"
                 onClick={() => go("/app/alignment/new")}
               >
-                <Clock className="h-6 w-6" />
-                <span className="text-sm">Técnica del Reloj</span>
+                <Clock className="h-5 w-5" />
+                <span>Técnica del Reloj</span>
               </Button>
               <Button
                 variant="outline"
-                className="h-20 flex flex-col items-center justify-center space-y-2 bg-transparent"
+                className="h-16 sm:h-20 flex flex-col items-center justify-center gap-1.5 bg-transparent text-xs sm:text-sm"
                 onClick={() => go("/app/calculations")}
               >
-                <Calculator className="h-6 w-6" />
-                <span className="text-sm">Calculadora</span>
+                <Calculator className="h-5 w-5" />
+                <span>Calculadora</span>
               </Button>
               <Button
                 variant="outline"
-                className="h-20 flex flex-col items-center justify-center space-y-2 bg-transparent"
+                className="h-16 sm:h-20 flex flex-col items-center justify-center gap-1.5 bg-transparent text-xs sm:text-sm"
                 onClick={() => go("/app/reports")}
               >
-                <FileText className="h-6 w-6" />
-                <span className="text-sm">Generar Reporte</span>
+                <FileText className="h-5 w-5" />
+                <span>Generar Reporte</span>
               </Button>
               <Button
                 variant="outline"
-                className="h-20 flex flex-col items-center justify-center space-y-2 bg-transparent"
+                className="h-16 sm:h-20 flex flex-col items-center justify-center gap-1.5 bg-transparent text-xs sm:text-sm"
                 onClick={() => go("/app/alignment/rim-face/new")}
               >
-                <CheckCircle className="h-6 w-6" />
-                <span className="text-sm">Verificar Datos</span>
+                <CheckCircle className="h-5 w-5" />
+                <span>Verificar Datos</span>
               </Button>
             </div>
           </CardContent>
