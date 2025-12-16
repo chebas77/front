@@ -302,7 +302,7 @@ export function Header() {
         {/* Botón hamburger para abrir sidebar */}
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('toggle-sidebar'))}
-          className="lg:hidden h-8 w-8 flex items-center justify-center rounded-md hover:bg-accent transition-colors flex-shrink-0"
+          className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-accent transition-colors flex-shrink-0"
           aria-label="Toggle menu"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -44,7 +44,15 @@ export function Sidebar() {
 
   // Escuchar evento del botón hamburger en el header
   useEffect(() => {
-    const handleToggle = () => setIsMobileOpen(prev => !prev);
+    const handleToggle = () => {
+      // En móvil (< lg), abre/cierra el sidebar como overlay
+      // En desktop (≥ lg), colapsa/expande el sidebar
+      if (window.innerWidth < 1024) {
+        setIsMobileOpen(prev => !prev);
+      } else {
+        setIsCollapsed(prev => !prev);
+      }
+    };
     window.addEventListener('toggle-sidebar', handleToggle);
     return () => window.removeEventListener('toggle-sidebar', handleToggle);
   }, []);
@@ -69,27 +77,20 @@ export function Sidebar() {
         />
       )}
       
-      {/* Sidebar - Oculto completamente en móviles, visible en lg+ */}
-      <aside className={`hidden lg:block lg:relative fixed inset-y-0 left-0 z-50 transform ${isMobileOpen ? 'translate-x-0 !block' : '-translate-x-full'} transition-transform duration-300`}>
+      {/* Sidebar - Oculto en móvil (solo aparece con overlay), colapsable en desktop */}
+      <aside className={`fixed lg:relative inset-y-0 left-0 z-50 transition-all duration-300 ${
+        isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
         <Card className={`${containerWidth} transition-all duration-300 h-full rounded-none border-r bg-sidebar border-sidebar-border`}>
       <div className="flex h-full flex-col">
         <div className="border-b border-sidebar-border p-4">
           <div className="flex items-center justify-between">
-            {!isCollapsed && (
-              <div className="flex items-center space-x-2">
-                <Cog className="h-8 w-8 text-sidebar-primary" />
+            <div className="flex items-center space-x-2">
+              <Cog className="h-8 w-8 text-sidebar-primary" />
+              {!isCollapsed && (
                 <h1 className="text-lg font-bold text-sidebar-foreground">Alignment Pro</h1>
-              </div>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsCollapsed((collapsed) => !collapsed)}
-              className="text-sidebar-foreground hover:bg-sidebar-accent"
-              aria-label={isCollapsed ? "Expandir" : "Colapsar"}
-            >
-              {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </Button>
+              )}
+            </div>
           </div>
         </div>
 
